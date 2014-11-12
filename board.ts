@@ -1,18 +1,16 @@
-interface BoardPos {
+import State = require("state");
+import Unit = require("unit");
+
+export interface BoardPos {
   x: number;
   y: number;
 }
 
-interface ScreenPos {
+export interface ScreenPos {
   x: number;
   y: number;
 }
 
-class Board {
-  units : Unit[];
-}
-
-
-class Board {
-  units : Unit[];
+export class Board {
+  units : Unit.Unit[];
 }
