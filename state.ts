@@ -1,4 +1,6 @@
-import Board = require("board");
-export class GameState {
-  boards: Board.Board[];
+/// <reference path="references.ts" />
+module Timeline {
+  class GameState {
+    boards: Board[];
+  }
 }
