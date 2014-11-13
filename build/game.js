@@ -59,6 +59,15 @@ var Timeline;
 /// <reference path="references.ts" />
 var Timeline;
 (function (Timeline) {
+    var GameState = (function () {
+        function GameState() {
+        }
+        return GameState;
+    })();
+})(Timeline || (Timeline = {}));
+/// <reference path="references.ts" />
+var Timeline;
+(function (Timeline) {
     var Board = (function () {
         function Board() {
         }
@@ -66,12 +75,4 @@ var Timeline;
     })();
     Timeline.Board = Board;
 })(Timeline || (Timeline = {}));
-/// <reference path="references.ts" />
-var Timeline;
-(function (Timeline) {
-    var GameState = (function () {
-        function GameState() {
-        }
-        return GameState;
-    })();
-})(Timeline || (Timeline = {}));
+//# sourceMappingURL=game.js.map
