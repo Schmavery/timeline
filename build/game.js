@@ -68,6 +68,19 @@ var Timeline;
 /// <reference path="references.ts" />
 var Timeline;
 (function (Timeline) {
+    var Game = (function (_super) {
+        __extends(Game, _super);
+        function Game(width, height) {
+            console.log("Initializing Game object");
+            _super.call(this, width, height, Phaser.CANVAS, "Timeline Game", null);
+        }
+        return Game;
+    })(Phaser.Game);
+    var game = new Game(500, 500);
+})(Timeline || (Timeline = {}));
+/// <reference path="references.ts" />
+var Timeline;
+(function (Timeline) {
     var Board = (function () {
         function Board() {
         }

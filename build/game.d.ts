@@ -1,3 +1,4 @@
+/// <reference path="../node_modules/phaser/build/phaser.d.ts" />
 declare module Timeline {
     class Unit {
         pos: {
@@ -38,6 +39,8 @@ declare module Timeline {
         RANGE: number;
         constructor(ownerId: number);
     }
+}
+declare module Timeline {
 }
 declare module Timeline {
 }
