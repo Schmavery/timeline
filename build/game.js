@@ -88,4 +88,3 @@ var Timeline;
     })();
     Timeline.Board = Board;
 })(Timeline || (Timeline = {}));
-//# sourceMappingURL=game.js.map

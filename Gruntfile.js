@@ -48,8 +48,8 @@ module.exports = function(grunt) {
           module: 'amd', //or commonjs
           target: 'es5', //or es3
           basePath: 'src/',
-          sourceMap: true,
-          declaration: true
+          sourceMap: false,
+          declaration: false
         }
       }
     },
