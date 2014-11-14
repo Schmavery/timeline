@@ -68,11 +68,56 @@ var Timeline;
 /// <reference path="references.ts" />
 var Timeline;
 (function (Timeline) {
+    var Play = (function (_super) {
+        __extends(Play, _super);
+        function Play() {
+            _super.apply(this, arguments);
+        }
+        Play.prototype.preload = function () {
+            console.log("Preloading Play");
+            this.game.load.image("menu-btn", "../assets/menu-btn.png");
+        };
+        Play.prototype.create = function () {
+            var _this = this;
+            console.log("Creating Play");
+            var sprite = this.game.add.sprite(50, 150, "menu-btn");
+            sprite.inputEnabled = true;
+            sprite.events.onInputDown.add(function () {
+                _this.game.state.start("Menu");
+            }, this);
+        };
+        Play.prototype.update = function () {
+        };
+        return Play;
+    })(Phaser.State);
+    var Menu = (function (_super) {
+        __extends(Menu, _super);
+        function Menu() {
+            _super.apply(this, arguments);
+        }
+        Menu.prototype.preload = function () {
+            console.log("Preloading Menu");
+            this.game.load.image("start-btn", "../assets/start-btn.png");
+        };
+        Menu.prototype.create = function () {
+            var _this = this;
+            console.log("Creating Menu");
+            var sprite = this.game.add.sprite(50, 150, "start-btn");
+            sprite.inputEnabled = true;
+            sprite.events.onInputDown.add(function () {
+                _this.game.state.start("Play");
+            }, this);
+        };
+        return Menu;
+    })(Phaser.State);
     var Game = (function (_super) {
         __extends(Game, _super);
         function Game(width, height) {
             console.log("Initializing Game object");
             _super.call(this, width, height, Phaser.CANVAS, "Timeline Game", null);
+            this.state.add("Menu", Menu);
+            this.state.add("Play", Play);
+            this.state.start("Menu");
         }
         return Game;
     })(Phaser.Game);
@@ -88,3 +133,4 @@ var Timeline;
     })();
     Timeline.Board = Board;
 })(Timeline || (Timeline = {}));
+/// <reference path="references.ts" />
