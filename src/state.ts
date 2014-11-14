@@ -1,6 +1,6 @@
 /// <reference path="references.ts" />
 module Timeline {
-  class GameState {
+  export class GameState {
     boards: Board[];
   }
 }

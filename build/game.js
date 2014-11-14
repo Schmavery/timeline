@@ -64,6 +64,7 @@ var Timeline;
         }
         return GameState;
     })();
+    Timeline.GameState = GameState;
 })(Timeline || (Timeline = {}));
 /// <reference path="references.ts" />
 var Timeline;
@@ -90,6 +91,11 @@ var Timeline;
         };
         return Play;
     })(Phaser.State);
+    Timeline.Play = Play;
+})(Timeline || (Timeline = {}));
+/// <reference path="references.ts" />
+var Timeline;
+(function (Timeline) {
     var Menu = (function (_super) {
         __extends(Menu, _super);
         function Menu() {
@@ -110,17 +116,19 @@ var Timeline;
         };
         return Menu;
     })(Phaser.State);
+    Timeline.Menu = Menu;
     var Game = (function (_super) {
         __extends(Game, _super);
         function Game(width, height) {
             console.log("Initializing Game object");
             _super.call(this, width, height, Phaser.CANVAS, "Timeline Game", null);
             this.state.add("Menu", Menu);
-            this.state.add("Play", Play);
+            this.state.add("Play", Timeline.Play);
             this.state.start("Menu");
         }
         return Game;
     })(Phaser.Game);
+    Timeline.Game = Game;
     var game = new Game(500, 500);
 })(Timeline || (Timeline = {}));
 /// <reference path="references.ts" />
@@ -133,4 +141,3 @@ var Timeline;
     })();
     Timeline.Board = Board;
 })(Timeline || (Timeline = {}));
-/// <reference path="references.ts" />

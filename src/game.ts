@@ -1,24 +1,6 @@
 /// <reference path="references.ts" />
 module Timeline {
-  class Play extends Phaser.State {
-    preload() {
-      console.log("Preloading Play");
-      this.game.load.image("menu-btn", "../assets/menu-btn.png");
-    }
-
-    create() {
-      console.log("Creating Play");
-      var sprite = this.game.add.sprite(50, 150, "menu-btn");
-      sprite.inputEnabled = true;
-      sprite.events.onInputDown.add(() => {this.game.state.start("Menu")}, this);
-    }
-
-    update() {
-
-    }
-  }
-
-  class Menu extends Phaser.State {
+  export class Menu extends Phaser.State {
     preload() {
       console.log("Preloading Menu");
       this.game.load.image("start-btn", "../assets/start-btn.png");
@@ -32,7 +14,7 @@ module Timeline {
     }
   }
 
-  class Game extends Phaser.Game {
+  export class Game extends Phaser.Game {
     constructor(width: number, height: number) {
       console.log("Initializing Game object");
       super(width, height, Phaser.CANVAS, "Timeline Game", null);
