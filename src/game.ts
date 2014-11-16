@@ -1,5 +1,8 @@
 /// <reference path="references.ts" />
 module Timeline {
+  export var GAME_WIDTH : number = 800;
+  export var GAME_HEIGHT: number = 600;
+  export var SCALE: number = 2;
   export class Menu extends Phaser.State {
     preload() {
       console.log("Preloading Menu");
@@ -23,5 +26,5 @@ module Timeline {
       this.state.start("Menu");
     }
   }
-  var game = new Game(500, 500);
+  var game = new Game(GAME_WIDTH, GAME_HEIGHT);
 }

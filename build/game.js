@@ -77,6 +77,8 @@ var Timeline;
         Play.prototype.preload = function () {
             console.log("Preloading Play");
             this.game.load.image("menu-btn", "assets/menu-btn.png");
+            this.game.load.tilemap("test-map", "assets/maps/testmap.json", null, Phaser.Tilemap.TILED_JSON);
+            this.game.load.image("test-tile-set", "assets/maps/test-tile-set.png");
         };
         Play.prototype.create = function () {
             var _this = this;
@@ -86,6 +88,11 @@ var Timeline;
             sprite.events.onInputDown.add(function () {
                 _this.game.state.start("Menu");
             }, this);
+            var map = this.game.add.tilemap("test-map");
+            var layer = map.createLayer("Tile Layer 1");
+            map.addTilesetImage("testset", "test-tile-set");
+            layer.scale.set(Timeline.SCALE, Timeline.SCALE);
+            Phaser.Canvas.setSmoothingEnabled(this.game.context, false);
         };
         Play.prototype.update = function () {
         };
@@ -96,6 +103,9 @@ var Timeline;
 /// <reference path="references.ts" />
 var Timeline;
 (function (Timeline) {
+    Timeline.GAME_WIDTH = 800;
+    Timeline.GAME_HEIGHT = 600;
+    Timeline.SCALE = 2;
     var Menu = (function (_super) {
         __extends(Menu, _super);
         function Menu() {
@@ -129,7 +139,7 @@ var Timeline;
         return Game;
     })(Phaser.Game);
     Timeline.Game = Game;
-    var game = new Game(500, 500);
+    var game = new Game(Timeline.GAME_WIDTH, Timeline.GAME_HEIGHT);
 })(Timeline || (Timeline = {}));
 /// <reference path="references.ts" />
 var Timeline;
