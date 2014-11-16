@@ -76,7 +76,7 @@ var Timeline;
         }
         Play.prototype.preload = function () {
             console.log("Preloading Play");
-            this.game.load.image("menu-btn", "../assets/menu-btn.png");
+            this.game.load.image("menu-btn", "assets/menu-btn.png");
         };
         Play.prototype.create = function () {
             var _this = this;
@@ -103,7 +103,7 @@ var Timeline;
         }
         Menu.prototype.preload = function () {
             console.log("Preloading Menu");
-            this.game.load.image("start-btn", "../assets/start-btn.png");
+            this.game.load.image("start-btn", "assets/start-btn.png");
         };
         Menu.prototype.create = function () {
             var _this = this;

@@ -3,7 +3,7 @@ module Timeline {
   export class Menu extends Phaser.State {
     preload() {
       console.log("Preloading Menu");
-      this.game.load.image("start-btn", "../assets/start-btn.png");
+      this.game.load.image("start-btn", "assets/start-btn.png");
     }
 
     create() {
