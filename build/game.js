@@ -83,15 +83,15 @@ var Timeline;
         Play.prototype.create = function () {
             var _this = this;
             console.log("Creating Play");
-            var sprite = this.game.add.sprite(50, 150, "menu-btn");
+            var sprite = this.game.add.sprite(340 * Timeline.SCALE, 50 * Timeline.SCALE, "menu-btn");
             sprite.inputEnabled = true;
             sprite.events.onInputDown.add(function () {
                 _this.game.state.start("Menu");
             }, this);
             var map = this.game.add.tilemap("test-map");
-            var layer = map.createLayer("Tile Layer 1");
+            this.layer = map.createLayer("Tile Layer 1");
             map.addTilesetImage("testset", "test-tile-set");
-            layer.scale.set(Timeline.SCALE, Timeline.SCALE);
+            this.layer.scale.set(Timeline.SCALE);
             Phaser.Canvas.setSmoothingEnabled(this.game.context, false);
         };
         Play.prototype.update = function () {
@@ -103,9 +103,11 @@ var Timeline;
 /// <reference path="references.ts" />
 var Timeline;
 (function (Timeline) {
-    Timeline.GAME_WIDTH = 800;
-    Timeline.GAME_HEIGHT = 600;
+    Timeline.GAME_WIDTH = 400;
+    Timeline.GAME_HEIGHT = 300;
     Timeline.SCALE = 2;
+    Timeline.TILE_SIZE = 16;
+    //export var BOARD_SIZE: number = 20;
     var Menu = (function (_super) {
         __extends(Menu, _super);
         function Menu() {
@@ -139,7 +141,7 @@ var Timeline;
         return Game;
     })(Phaser.Game);
     Timeline.Game = Game;
-    var game = new Game(Timeline.GAME_WIDTH, Timeline.GAME_HEIGHT);
+    var game = new Game(Timeline.GAME_WIDTH * Timeline.SCALE, Timeline.GAME_HEIGHT * Timeline.SCALE);
 })(Timeline || (Timeline = {}));
 /// <reference path="references.ts" />
 var Timeline;

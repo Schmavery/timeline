@@ -1,6 +1,7 @@
 /// <reference path="references.ts" />
 module Timeline {
   export class Play extends Phaser.State {
+    layer: Phaser.TilemapLayer;
     preload() {
       console.log("Preloading Play");
       this.game.load.image("menu-btn", "assets/menu-btn.png");
@@ -11,14 +12,14 @@ module Timeline {
 
     create() {
       console.log("Creating Play");
-      var sprite = this.game.add.sprite(50, 150, "menu-btn");
+      var sprite = this.game.add.sprite(340*SCALE, 50*SCALE, "menu-btn");
       sprite.inputEnabled = true;
       sprite.events.onInputDown.add(() => {this.game.state.start("Menu")}, this);
 
       var map = this.game.add.tilemap("test-map");
-      var layer = map.createLayer("Tile Layer 1");
+      this.layer = map.createLayer("Tile Layer 1");
       map.addTilesetImage("testset", "test-tile-set");
-      layer.scale.set(SCALE, SCALE);
+      this.layer.scale.set(SCALE);
       Phaser.Canvas.setSmoothingEnabled(this.game.context, false);
     }
 
