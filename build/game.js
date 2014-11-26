@@ -8,63 +8,83 @@ var __extends = this.__extends || function (d, b) {
 var Timeline;
 (function (Timeline) {
     var Unit = (function () {
-        function Unit(ownerId) {
+        function Unit(isAlly) {
             this.health = this.HEALTH;
             this.usedAP = 0;
-            this.owner = ownerId;
+            this.isAlly = isAlly;
+            this.x = 0;
+            this.y = 0;
         }
-        Unit.prototype.doAction = function (pos) {
-            return;
+        Unit.prototype.setPosition = function (x, y) {
+            this.x = x;
+            this.y = y;
         };
         return Unit;
     })();
     Timeline.Unit = Unit;
     var Warrior = (function (_super) {
         __extends(Warrior, _super);
-        function Warrior(ownerId) {
-            _super.call(this, ownerId);
+        function Warrior(isAlly) {
+            _super.call(this, isAlly);
             this.HEALTH = 3;
             this.DAMAGE = 2;
             this.AP = 3;
             this.RANGE = 1;
+            this.textureKey = "Warrior";
         }
         return Warrior;
     })(Unit);
     Timeline.Warrior = Warrior;
     var Mage = (function (_super) {
         __extends(Mage, _super);
-        function Mage(ownerId) {
-            _super.call(this, ownerId);
+        function Mage(isAlly) {
+            _super.call(this, isAlly);
             this.HEALTH = 1;
             this.DAMAGE = 3;
             this.AP = 1;
             this.RANGE = 2;
+            this.textureKey = "Mage";
         }
         return Mage;
     })(Unit);
     Timeline.Mage = Mage;
     var Archer = (function (_super) {
         __extends(Archer, _super);
-        function Archer(ownerId) {
-            _super.call(this, ownerId);
+        function Archer(isAlly) {
+            _super.call(this, isAlly);
             this.HEALTH = 2;
             this.DAMAGE = 1;
             this.AP = 2;
             this.RANGE = 3;
+            this.textureKey = "Archer";
         }
         return Archer;
     })(Unit);
     Timeline.Archer = Archer;
+    Timeline.UnitClasses = {
+        "Warrior": Warrior,
+        "Archer": Archer,
+        "Mage": Mage
+    };
 })(Timeline || (Timeline = {}));
 /// <reference path="references.ts" />
 var Timeline;
 (function (Timeline) {
-    var GameState = (function () {
-        function GameState() {
+    var _GameState = (function () {
+        function _GameState() {
+            this.boards = [];
         }
-        return GameState;
+        return _GameState;
     })();
-    Timeline.GameState = GameState;
+    // SINGLETON PRIVATE FACTORY METHOD
+    Timeline.GameState = new _GameState();
+    var Board = (function () {
+        function Board(c) {
+            this.allCharacters = c;
+        }
+        return Board;
+    })();
+    Timeline.Board = Board;
 })(Timeline || (Timeline = {}));
 /// <reference path="references.ts" />
 var Timeline;
@@ -79,6 +99,7 @@ var Timeline;
             this.game.load.image("menu-btn", "assets/menu-btn.png");
             this.game.load.tilemap("test-map", "assets/maps/testmap.json", null, Phaser.Tilemap.TILED_JSON);
             this.game.load.image("test-tile-set", "assets/maps/test-tile-set.png");
+            this.game.load.spritesheet("characters", "assets/maps/people.png", 16, 16, 50);
         };
         Play.prototype.create = function () {
             var _this = this;
@@ -92,13 +113,27 @@ var Timeline;
             this.layer = map.createLayer("Tile Layer 1");
             map.addTilesetImage("testset", "test-tile-set");
             this.layer.scale.set(Timeline.SCALE);
-            Phaser.Canvas.setSmoothingEnabled(this.game.context, false);
+            var characters = createGameObjectFromLayer("Characters", map);
+            var board = new Timeline.Board(characters);
+            Timeline.GameState.boards.push(board);
+            Timeline.loadSpritesFromObjects(this.game, characters);
         };
         Play.prototype.update = function () {
         };
         return Play;
     })(Phaser.State);
     Timeline.Play = Play;
+    function createGameObjectFromLayer(layerName, map) {
+        console.log(map.objects);
+        var arr = map.objects[layerName];
+        var ret = [];
+        for (var i = 0; i < arr.length; i++) {
+            var character = new Timeline.UnitClasses[arr[i].properties.type]();
+            character.setPosition(Timeline.SCALE * arr[i].x, Timeline.SCALE * (arr[i].y - Timeline.TILE_SIZE));
+            ret.push(character);
+        }
+        return ret;
+    }
 })(Timeline || (Timeline = {}));
 /// <reference path="references.ts" />
 var Timeline;
@@ -133,10 +168,12 @@ var Timeline;
         __extends(Game, _super);
         function Game(width, height) {
             console.log("Initializing Game object");
-            _super.call(this, width, height, Phaser.CANVAS, "Timeline Game", null);
+            _super.call(this, width, height, Phaser.CANVAS, "Timeline Game", null, false, false);
             this.state.add("Menu", Menu);
             this.state.add("Play", Timeline.Play);
-            this.state.start("Menu");
+            // TODO: Uncomment for prod
+            // this.state.start("Menu");
+            this.state.start("Play");
         }
         return Game;
     })(Phaser.Game);
@@ -146,10 +183,16 @@ var Timeline;
 /// <reference path="references.ts" />
 var Timeline;
 (function (Timeline) {
-    var Board = (function () {
-        function Board() {
-        }
-        return Board;
-    })();
-    Timeline.Board = Board;
+    var map = new Map();
+    function loadSpritesFromObjects(game, arr) {
+        arr.map(function (u) {
+            var sprite = game.add.sprite(u.x, u.y, "characters");
+            sprite.scale.set(Timeline.SCALE);
+            sprite.animations.add('move', [0, 1, 2, 3], 10, true);
+            sprite.play('move');
+            map = map.set(u, sprite);
+        });
+    }
+    Timeline.loadSpritesFromObjects = loadSpritesFromObjects;
 })(Timeline || (Timeline = {}));
+//# sourceMappingURL=game.js.map

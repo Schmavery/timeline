@@ -16,7 +16,7 @@ module.exports = function(grunt) {
         options: {
           livereload: LIVERELOAD_PORT
         },
-        files: ["src/**/*"]
+        files: ["src/**/*", "assets/**/*"]
       }
     },
     connect: {
@@ -48,7 +48,7 @@ module.exports = function(grunt) {
           module: 'amd', //or commonjs
           target: 'es5', //or es3
           basePath: 'src/',
-          sourceMap: false,
+          sourceMap: true,
           declaration: false
         }
       }

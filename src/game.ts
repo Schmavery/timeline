@@ -5,6 +5,7 @@ module Timeline {
   export var SCALE: number = 2;
   export var TILE_SIZE: number = 16
   //export var BOARD_SIZE: number = 20;
+
   export class Menu extends Phaser.State {
     preload() {
       console.log("Preloading Menu");
@@ -22,11 +23,17 @@ module Timeline {
   export class Game extends Phaser.Game {
     constructor(width: number, height: number) {
       console.log("Initializing Game object");
-      super(width, height, Phaser.CANVAS, "Timeline Game", null);
+      super(width, height, Phaser.CANVAS, "Timeline Game", null, false, false);
+
+
       this.state.add("Menu", Menu);
       this.state.add("Play", Play);
-      this.state.start("Menu");
+
+      // TODO: Uncomment for prod
+      // this.state.start("Menu");
+      this.state.start("Play");
     }
   }
-  var game = new Game(GAME_WIDTH*SCALE, GAME_HEIGHT*SCALE);
+
+  var game = new Game(GAME_WIDTH * SCALE, GAME_HEIGHT * SCALE);
 }

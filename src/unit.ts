@@ -1,25 +1,34 @@
 /// <reference path="references.ts" />
 module Timeline {
   export class Unit {
-    pos: {x: number; y: number};
+    x: number;
+    y: number;
     health: number;
     usedAP: number;
-    owner: number;
+    isAlly: number;
+    textureKey: string;
 
     HEALTH: number;
     DAMAGE: number;
     AP: number;
     RANGE: number;
 
-    constructor(ownerId: number) {
+    constructor(isAlly: number) {
       this.health = this.HEALTH;
       this.usedAP = 0;
-      this.owner = ownerId;
+      this.isAlly = isAlly;
+      this.x = 0;
+      this.y = 0;
     }
 
-    doAction(pos: {x: number; y: number}): number {
-      return;
+    setPosition(x: number, y: number) {
+      this.x = x;
+      this.y = y;
     }
+
+    // doAction(pos: {x: number; y: number}): number {
+    //   return;
+    // }
 
   }
 
@@ -28,7 +37,10 @@ module Timeline {
     DAMAGE = 2;
     AP = 3;
     RANGE = 1;
-    constructor(ownerId: number){ super(ownerId); }
+    constructor(isAlly: number){
+      super(isAlly);
+      this.textureKey = "Warrior";
+    }
   }
 
   export class Mage extends Unit {
@@ -36,7 +48,10 @@ module Timeline {
     DAMAGE = 3;
     AP = 1;
     RANGE = 2;
-    constructor(ownerId: number){ super(ownerId); }
+    constructor(isAlly: number){
+      super(isAlly);
+      this.textureKey = "Mage";
+    }
   }
 
   export class Archer extends Unit {
@@ -44,6 +59,15 @@ module Timeline {
     DAMAGE = 1;
     AP = 2;
     RANGE = 3;
-    constructor(ownerId: number){ super(ownerId); }
+    constructor(isAlly: number){
+      super(isAlly);
+      this.textureKey = "Archer";
+    }
+  }
+
+  export var UnitClasses = {
+    "Warrior": Warrior,
+    "Archer": Archer,
+    "Mage": Mage
   }
 }
