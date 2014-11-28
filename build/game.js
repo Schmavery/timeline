@@ -19,6 +19,17 @@ var Timeline;
             this.x = x;
             this.y = y;
         };
+        Unit.prototype.doAction = function (pos) {
+            return;
+        };
+        Unit.prototype.clone = function () {
+            var c = new Timeline.UnitClasses[this.textureKey](this.isAlly);
+            c.x = this.x;
+            c.y = this.y;
+            c.health = this.health;
+            c.usedAP = this.usedAP;
+            return c;
+        };
         return Unit;
     })();
     Timeline.Unit = Unit;
@@ -82,6 +93,11 @@ var Timeline;
         function Board(c) {
             this.allCharacters = c;
         }
+        Board.prototype.clone = function () {
+            return new Board(this.allCharacters.map(function (c) {
+                return c.clone();
+            }));
+        };
         return Board;
     })();
     Timeline.Board = Board;
@@ -124,6 +140,9 @@ var Timeline;
         return Play;
     })(Phaser.State);
     Timeline.Play = Play;
+    function splitGame(board) {
+        Timeline.GameState.boards.push(board.clone());
+    }
     function createGameObjectFromLayer(layerName, map) {
         console.log(map.objects);
         var arr = map.objects[layerName];
@@ -186,22 +205,38 @@ var Timeline;
 (function (Timeline) {
     var Display;
     (function (Display) {
-        var map = new Map();
+        var spriteMap = [];
         function loadSpritesFromObjects(game, arr) {
             arr.map(function (u) {
                 var sprite = game.add.sprite(u.x, u.y, "characters");
                 sprite.scale.set(Timeline.SCALE);
-                sprite.animations.add('moveDown', [0, 1, 2, 3], 10, true);
-                // sprite.play('move');
-                map = map.set(u, sprite);
+                // sprite.animations.add('moveDown', [0, 1, 2, 3], 10, true);
+                pushInMap(spriteMap, u, sprite);
             });
         }
         Display.loadSpritesFromObjects = loadSpritesFromObjects;
         function moveObject(unit, name) {
-            var sprite = map.get(unit);
-            sprite.play(name);
+            // var sprite = getFromMap(spriteMap, unit);
+            // sprite.play(name);
         }
         Display.moveObject = moveObject;
+        function getFromMap(map, key) {
+            for (var i = 0; i < map.length; i++) {
+                if (map[i].key === key) {
+                    return map[i].val;
+                }
+            }
+            return null;
+        }
+        function pushInMap(map, key, val) {
+            for (var i = 0; i < map.length; i++) {
+                if (map[i].key === key) {
+                    map[i].val = val;
+                    return;
+                }
+            }
+            map.push({ key: key, val: val });
+        }
     })(Display = Timeline.Display || (Timeline.Display = {}));
 })(Timeline || (Timeline = {}));
 //# sourceMappingURL=game.js.map
