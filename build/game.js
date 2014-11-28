@@ -116,7 +116,8 @@ var Timeline;
             var characters = createGameObjectFromLayer("Characters", map);
             var board = new Timeline.Board(characters);
             Timeline.GameState.boards.push(board);
-            Timeline.loadSpritesFromObjects(this.game, characters);
+            Timeline.Display.loadSpritesFromObjects(this.game, characters);
+            Timeline.Display.moveObject(characters[0], "moveDown");
         };
         Play.prototype.update = function () {
         };
@@ -183,16 +184,24 @@ var Timeline;
 /// <reference path="references.ts" />
 var Timeline;
 (function (Timeline) {
-    var map = new Map();
-    function loadSpritesFromObjects(game, arr) {
-        arr.map(function (u) {
-            var sprite = game.add.sprite(u.x, u.y, "characters");
-            sprite.scale.set(Timeline.SCALE);
-            sprite.animations.add('move', [0, 1, 2, 3], 10, true);
-            sprite.play('move');
-            map = map.set(u, sprite);
-        });
-    }
-    Timeline.loadSpritesFromObjects = loadSpritesFromObjects;
+    var Display;
+    (function (Display) {
+        var map = new Map();
+        function loadSpritesFromObjects(game, arr) {
+            arr.map(function (u) {
+                var sprite = game.add.sprite(u.x, u.y, "characters");
+                sprite.scale.set(Timeline.SCALE);
+                sprite.animations.add('moveDown', [0, 1, 2, 3], 10, true);
+                // sprite.play('move');
+                map = map.set(u, sprite);
+            });
+        }
+        Display.loadSpritesFromObjects = loadSpritesFromObjects;
+        function moveObject(unit, name) {
+            var sprite = map.get(unit);
+            sprite.play(name);
+        }
+        Display.moveObject = moveObject;
+    })(Display = Timeline.Display || (Timeline.Display = {}));
 })(Timeline || (Timeline = {}));
 //# sourceMappingURL=game.js.map

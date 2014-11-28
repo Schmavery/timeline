@@ -29,7 +29,9 @@ module Timeline {
       var characters = createGameObjectFromLayer("Characters", map);
       var board = new Board(characters);
       GameState.boards.push(board);
-      loadSpritesFromObjects(this.game, characters);
+      Display.loadSpritesFromObjects(this.game, characters);
+
+      Display.moveObject(characters[0], "moveDown");
     }
 
     update() {
