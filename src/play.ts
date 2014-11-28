@@ -39,6 +39,10 @@ module Timeline {
     }
   }
 
+  function splitGame(board: Board) {
+    GameState.boards.push(board.clone());
+  }
+
   function createGameObjectFromLayer(layerName: string, map: Phaser.Tilemap): Unit[] {
     console.log(map.objects);
     var arr = map.objects[layerName];

@@ -3,7 +3,8 @@ module Timeline {
   export var GAME_WIDTH : number = 400;
   export var GAME_HEIGHT: number = 300;
   export var SCALE: number = 2;
-  export var TILE_SIZE: number = 16
+  export var TILE_SIZE: number = 16;
+
   //export var BOARD_SIZE: number = 20;
 
   export class Menu extends Phaser.State {
