@@ -81,14 +81,20 @@ var Timeline;
 /// <reference path="references.ts" />
 var Timeline;
 (function (Timeline) {
-    var _GameState = (function () {
-        function _GameState() {
-            this.boards = [];
-        }
-        return _GameState;
-    })();
+    // class _GameState {
+    //   boards: Board[];
+    //   currentBoard: Board;
+    //   constructor() {
+    //     this.boards = [];
+    //   }
+    // }
+    var GameState;
+    (function (GameState) {
+        GameState.boards = [];
+        GameState.currentBoard = null;
+    })(GameState = Timeline.GameState || (Timeline.GameState = {}));
     // SINGLETON PRIVATE FACTORY METHOD
-    Timeline.GameState = new _GameState();
+    // export var GameState = new _GameState();
     var Board = (function () {
         function Board(c) {
             this.allCharacters = c;
@@ -210,16 +216,28 @@ var Timeline;
             arr.map(function (u) {
                 var sprite = game.add.sprite(u.x, u.y, "characters");
                 sprite.scale.set(Timeline.SCALE);
-                // sprite.animations.add('moveDown', [0, 1, 2, 3], 10, true);
+                sprite.animations.add('moveDown', [0, 1, 2, 3], 10, true);
                 pushInMap(spriteMap, u, sprite);
             });
         }
         Display.loadSpritesFromObjects = loadSpritesFromObjects;
         function moveObject(unit, name) {
-            // var sprite = getFromMap(spriteMap, unit);
-            // sprite.play(name);
+            var sprite = getFromMap(spriteMap, unit);
+            sprite.play(name);
         }
         Display.moveObject = moveObject;
+        function drawBoard(game, board) {
+            for (var i = 0; i < spriteMap.length; i++) {
+                spriteMap[i].val.exists = false;
+            }
+            for (var i = 0; i < board.allCharacters.length; i++) {
+                var c = board.allCharacters[i];
+                var sprite = getFromMap(spriteMap, c);
+                console.log(c, sprite);
+                sprite.exists = true;
+            }
+        }
+        Display.drawBoard = drawBoard;
         function getFromMap(map, key) {
             for (var i = 0; i < map.length; i++) {
                 if (map[i].key === key) {

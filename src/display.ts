@@ -8,14 +8,29 @@ module Timeline {
       arr.map((u) => {
         var sprite = game.add.sprite(u.x, u.y, "characters");
         sprite.scale.set(SCALE);
-        // sprite.animations.add('moveDown', [0, 1, 2, 3], 10, true);
+        sprite.animations.add('moveDown', [0, 1, 2, 3], 10, true);
         pushInMap(spriteMap, u, sprite);
       });
     }
 
     export function moveObject(unit: Unit, name: string) {
-      // var sprite = getFromMap(spriteMap, unit);
-      // sprite.play(name);
+      var sprite = getFromMap(spriteMap, unit);
+      sprite.play(name);
+    }
+
+    export function drawBoard(game: Phaser.Game, board: Board) {
+      // Hide all the other sprites
+      for (var i = 0; i < spriteMap.length; i++) {
+        spriteMap[i].val.exists = false;
+      }
+
+      // Enable the ones from the board
+      for (var i = 0; i < board.allCharacters.length; i++) {
+        var c = board.allCharacters[i];
+        var sprite = getFromMap(spriteMap, c);
+        console.log(c, sprite);
+        sprite.exists = true;
+      }
     }
 
     function getFromMap(map, key) {
