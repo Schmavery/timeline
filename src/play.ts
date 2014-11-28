@@ -32,12 +32,22 @@ module Timeline {
       Display.loadSpritesFromObjects(this.game, characters);
 
       Display.moveObject(characters[0], "moveDown");
+      this.game.input.mouse.mouseWheelCallback = this.mouseWheelCallback.bind(this);
     }
 
     update() {
 
     }
+
+    mouseWheelCallback(event) {
+      var delta = this.game.input.mouse.wheelDelta;
+      console.log("delta:", delta);
+      GameState.currentBoard = GameState.boards
+          [(GameState.boards.indexOf(GameState.currentBoard) + delta) % GameState.boards.length]
+      Display.drawBoard(this.game, GameState.currentBoard);
+    }
   }
+
 
   function splitGame(board: Board) {
     GameState.boards.push(board.clone());
