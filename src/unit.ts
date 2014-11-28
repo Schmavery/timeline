@@ -26,9 +26,18 @@ module Timeline {
       this.y = y;
     }
 
-    // doAction(pos: {x: number; y: number}): number {
-    //   return;
-    // }
+    doAction(pos: {x: number; y: number}): number {
+      return;
+    }
+
+    clone(){
+      var c = new UnitClasses[this.textureKey](this.isAlly);
+      c.x = this.x;
+      c.y = this.y;
+      c.health = this.health;
+      c.usedAP = this.usedAP;
+      return c;
+    }
 
   }
 
