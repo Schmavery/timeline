@@ -122,10 +122,14 @@ var Timeline;
             this.game.load.tilemap("test-map", "assets/maps/testmap.json", null, Phaser.Tilemap.TILED_JSON);
             this.game.load.image("test-tile-set", "assets/maps/test-tile-set.png");
             this.game.load.spritesheet("characters", "assets/maps/people.png", 16, 16, 50);
+            this.game.input.mouse.mouseWheelCallback = mouseWheelCallback.bind(this);
+            this.game.input.onDown.add(onMouseDown, this);
+            this.game.input.onUp.add(onMouseUp, this);
         };
         Play.prototype.create = function () {
             var _this = this;
             console.log("Creating Play");
+            Timeline.Display.cacheGame(this.game);
             var sprite = this.game.add.sprite(340 * Timeline.SCALE, 50 * Timeline.SCALE, "menu-btn");
             sprite.inputEnabled = true;
             sprite.events.onInputDown.add(function () {
@@ -138,24 +142,57 @@ var Timeline;
             var characters = createGameObjectFromLayer("Characters", map);
             var board = new Timeline.Board(characters);
             Timeline.GameState.boards.push(board);
-            Timeline.Display.loadSpritesFromObjects(this.game, characters);
-            Timeline.Display.moveObject(characters[0], "moveDown");
+            Timeline.Display.loadSpritesFromObjects(characters);
+            focusOn(board);
+            this.splitGame(board);
         };
         Play.prototype.update = function () {
+        };
+        Play.prototype.splitGame = function (board) {
+            var newBoard = board.clone();
+            Timeline.GameState.boards.push(newBoard);
+            newBoard.allCharacters[0].x = 0;
+            Timeline.Display.loadSpritesFromObjects(newBoard.allCharacters);
+            focusOn(newBoard);
         };
         return Play;
     })(Phaser.State);
     Timeline.Play = Play;
-    function splitGame(board) {
-        Timeline.GameState.boards.push(board.clone());
+    function focusOn(board) {
+        Timeline.GameState.currentBoard = board;
+        Timeline.Display.drawBoard(board);
+    }
+    function onMouseDown(p) {
+        var characters = Timeline.GameState.currentBoard.allCharacters;
+        var X = ~~(p.x / (Timeline.SCALE * Timeline.TILE_SIZE));
+        var Y = ~~(p.y / (Timeline.SCALE * Timeline.TILE_SIZE));
+        for (var i = 0; i < characters.length; i++) {
+            if (characters[i].x === X && characters[i].y === Y) {
+                Timeline.Display.drawSelected(characters[i]);
+                console.log(characters[i]);
+            }
+        }
+    }
+    function onMouseUp(p) {
+        // console.log(p.x, p.y);
+    }
+    function mouseWheelCallback(event) {
+        var curTime = Date.now();
+        if (curTime - this.prevTime < 600) {
+            return;
+        }
+        this.prevTime = curTime;
+        var delta = this.game.input.mouse.wheelDelta;
+        // console.log("delta:", delta);
+        Timeline.GameState.currentBoard = Timeline.GameState.boards[(Timeline.GameState.boards.indexOf(Timeline.GameState.currentBoard) + delta + Timeline.GameState.boards.length) % Timeline.GameState.boards.length];
+        Timeline.Display.drawBoard(Timeline.GameState.currentBoard);
     }
     function createGameObjectFromLayer(layerName, map) {
-        console.log(map.objects);
         var arr = map.objects[layerName];
         var ret = [];
         for (var i = 0; i < arr.length; i++) {
             var character = new Timeline.UnitClasses[arr[i].properties.type]();
-            character.setPosition(Timeline.SCALE * arr[i].x, Timeline.SCALE * (arr[i].y - Timeline.TILE_SIZE));
+            character.setPosition(~~(arr[i].x / Timeline.TILE_SIZE), ~~(arr[i].y / Timeline.TILE_SIZE) - 1);
             ret.push(character);
         }
         return ret;
@@ -212,11 +249,19 @@ var Timeline;
     var Display;
     (function (Display) {
         var spriteMap = [];
-        function loadSpritesFromObjects(game, arr) {
+        var game = null;
+        var graphics = null;
+        function cacheGame(g) {
+            game = g;
+            graphics = game.add.graphics(0, 0);
+        }
+        Display.cacheGame = cacheGame;
+        function loadSpritesFromObjects(arr) {
             arr.map(function (u) {
-                var sprite = game.add.sprite(u.x, u.y, "characters");
+                var sprite = game.add.sprite(Timeline.SCALE * Timeline.TILE_SIZE * u.x, Timeline.SCALE * Timeline.TILE_SIZE * u.y, "characters");
                 sprite.scale.set(Timeline.SCALE);
                 sprite.animations.add('moveDown', [0, 1, 2, 3], 10, true);
+                sprite.exists = false;
                 pushInMap(spriteMap, u, sprite);
             });
         }
@@ -226,18 +271,24 @@ var Timeline;
             sprite.play(name);
         }
         Display.moveObject = moveObject;
-        function drawBoard(game, board) {
+        function drawBoard(board) {
             for (var i = 0; i < spriteMap.length; i++) {
                 spriteMap[i].val.exists = false;
             }
             for (var i = 0; i < board.allCharacters.length; i++) {
                 var c = board.allCharacters[i];
                 var sprite = getFromMap(spriteMap, c);
-                console.log(c, sprite);
                 sprite.exists = true;
             }
         }
         Display.drawBoard = drawBoard;
+        function drawSelected(unit) {
+            console.log("Tried to draw but didn't work");
+            graphics.beginFill(0x181818);
+            graphics.lineStyle(5, 0x00d9ff, 1);
+            graphics.drawRect(unit.x * Timeline.TILE_SIZE, unit.y * Timeline.TILE_SIZE, Timeline.TILE_SIZE, Timeline.TILE_SIZE);
+        }
+        Display.drawSelected = drawSelected;
         function getFromMap(map, key) {
             for (var i = 0; i < map.length; i++) {
                 if (map[i].key === key) {

@@ -3,12 +3,20 @@
 module Timeline {
   export module Display {
     var spriteMap: {key: Unit; val: Phaser.Sprite}[] = [];
+    var game = null;
+    var graphics = null;
 
-    export function loadSpritesFromObjects(game: Phaser.Game, arr: Unit[]) {
+    export function cacheGame(g: Phaser.Game) {
+      game = g;
+      graphics = game.add.graphics(0, 0);
+    }
+
+    export function loadSpritesFromObjects(arr: Unit[]) {
       arr.map((u) => {
-        var sprite = game.add.sprite(u.x, u.y, "characters");
+        var sprite = game.add.sprite(SCALE * TILE_SIZE * u.x, SCALE * TILE_SIZE * u.y, "characters");
         sprite.scale.set(SCALE);
         sprite.animations.add('moveDown', [0, 1, 2, 3], 10, true);
+        sprite.exists = false;
         pushInMap(spriteMap, u, sprite);
       });
     }
@@ -18,7 +26,7 @@ module Timeline {
       sprite.play(name);
     }
 
-    export function drawBoard(game: Phaser.Game, board: Board) {
+    export function drawBoard(board: Board) {
       // Hide all the other sprites
       for (var i = 0; i < spriteMap.length; i++) {
         spriteMap[i].val.exists = false;
@@ -28,9 +36,15 @@ module Timeline {
       for (var i = 0; i < board.allCharacters.length; i++) {
         var c = board.allCharacters[i];
         var sprite = getFromMap(spriteMap, c);
-        console.log(c, sprite);
         sprite.exists = true;
       }
+    }
+
+    export function drawSelected(unit: Unit) {
+      console.log("Tried to draw but didn't work");
+      graphics.beginFill(0x181818);
+      graphics.lineStyle(5, 0x00d9ff, 1);
+      graphics.drawRect(unit.x * TILE_SIZE, unit.y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
     }
 
     function getFromMap(map, key) {
