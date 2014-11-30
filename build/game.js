@@ -279,10 +279,10 @@ var Timeline;
             arr.map(function (u) {
                 var sprite = game.add.sprite(Timeline.SCALE * Timeline.TILE_SIZE * u.x, Timeline.SCALE * Timeline.TILE_SIZE * u.y, "characters");
                 sprite.scale.set(Timeline.SCALE);
+                sprite.animations.add('moveLeft', [20, 21, 22, 23], 10, true);
                 sprite.animations.add('moveDown', [0, 1, 2, 3], 10, true);
                 sprite.animations.add('moveUp', [4, 5, 6, 7], 10, true);
                 sprite.animations.add('moveRight', [16, 17, 18, 19], 10, true);
-                sprite.animations.add('moveLeft ', [20, 21, 22, 23], 10, true);
                 sprite.exists = false;
                 pushInMap(spriteMap, u, sprite);
             });
