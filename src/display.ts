@@ -15,6 +15,9 @@ module Timeline {
         var sprite = game.add.sprite(SCALE * TILE_SIZE * u.x, SCALE * TILE_SIZE * u.y, "characters");
         sprite.scale.set(SCALE);
         sprite.animations.add('moveDown', [0, 1, 2, 3], 10, true);
+        sprite.animations.add('moveUp', [4, 5, 6, 7], 10, true);
+        sprite.animations.add('moveRight', [16, 17, 18, 19], 10, true);
+        sprite.animations.add('moveLeft ', [20, 21, 22, 23], 10, true);
         sprite.exists = false;
         pushInMap(spriteMap, u, sprite);
       });
@@ -64,17 +67,36 @@ module Timeline {
     export function moveUnit(unit: Unit, dest: {x: number; y: number;}, callback) {
       selection.destroy();
       // Change the coordinates of the units
+      var X = unit.x * TILE_SIZE * SCALE;
+      var Y = unit.y * TILE_SIZE * SCALE;
       unit.x = dest.x;
       unit.y = dest.y;
 
       // Create the tween from the sprite mapped from the unit
-      var tween = game.add.tween(getFromMap(spriteMap, unit).position);
+      var sprite = getFromMap(spriteMap, unit);
+      var tween = game.add.tween(sprite.position);
       // Scale tween
       dest.x *= TILE_SIZE * SCALE;
       dest.y *= TILE_SIZE * SCALE;
 
+      var anim: Phaser.Animation;
+      if(dest.x - X < 0) {
+        anim = sprite.play("moveLeft");
+      } else if (dest.x - X > 0) {
+        anim = sprite.play("moveRight");
+      } else {
+        if(dest.y - Y < 0) {
+          anim = sprite.play("moveUp");
+        } else {
+          anim = sprite.play("moveDown");
+        }
+      }
+
       tween.to(dest, 500, Phaser.Easing.Quadratic.Out, true);
-      tween.onComplete.add(callback, this);
+      tween.onComplete.add(function() {
+        anim.complete();
+        callback();
+      }, this);
     }
 
     function getFromMap(map, key) {

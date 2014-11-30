@@ -280,6 +280,9 @@ var Timeline;
                 var sprite = game.add.sprite(Timeline.SCALE * Timeline.TILE_SIZE * u.x, Timeline.SCALE * Timeline.TILE_SIZE * u.y, "characters");
                 sprite.scale.set(Timeline.SCALE);
                 sprite.animations.add('moveDown', [0, 1, 2, 3], 10, true);
+                sprite.animations.add('moveUp', [4, 5, 6, 7], 10, true);
+                sprite.animations.add('moveRight', [16, 17, 18, 19], 10, true);
+                sprite.animations.add('moveLeft ', [20, 21, 22, 23], 10, true);
                 sprite.exists = false;
                 pushInMap(spriteMap, u, sprite);
             });
@@ -325,15 +328,36 @@ var Timeline;
         function moveUnit(unit, dest, callback) {
             selection.destroy();
             // Change the coordinates of the units
+            var X = unit.x * Timeline.TILE_SIZE * Timeline.SCALE;
+            var Y = unit.y * Timeline.TILE_SIZE * Timeline.SCALE;
             unit.x = dest.x;
             unit.y = dest.y;
             // Create the tween from the sprite mapped from the unit
-            var tween = game.add.tween(getFromMap(spriteMap, unit).position);
+            var sprite = getFromMap(spriteMap, unit);
+            var tween = game.add.tween(sprite.position);
             // Scale tween
             dest.x *= Timeline.TILE_SIZE * Timeline.SCALE;
             dest.y *= Timeline.TILE_SIZE * Timeline.SCALE;
+            var anim;
+            if (dest.x - X < 0) {
+                anim = sprite.play("moveLeft");
+            }
+            else if (dest.x - X > 0) {
+                anim = sprite.play("moveRight");
+            }
+            else {
+                if (dest.y - Y < 0) {
+                    anim = sprite.play("moveUp");
+                }
+                else {
+                    anim = sprite.play("moveDown");
+                }
+            }
             tween.to(dest, 500, Phaser.Easing.Quadratic.Out, true);
-            tween.onComplete.add(callback, this);
+            tween.onComplete.add(function () {
+                anim.complete();
+                callback();
+            }, this);
         }
         Display.moveUnit = moveUnit;
         function getFromMap(map, key) {
