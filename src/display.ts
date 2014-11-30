@@ -4,11 +4,10 @@ module Timeline {
   export module Display {
     var spriteMap: {key: Unit; val: Phaser.Sprite}[] = [];
     var game = null;
-    var graphics = null;
+    var selection = null;
 
     export function cacheGame(g: Phaser.Game) {
       game = g;
-      graphics = game.add.graphics(0, 0);
     }
 
     export function loadSpritesFromObjects(arr: Unit[]) {
@@ -27,6 +26,8 @@ module Timeline {
     }
 
     export function drawBoard(board: Board) {
+      if(selection) selection.destroy();
+
       // Hide all the other sprites
       for (var i = 0; i < spriteMap.length; i++) {
         spriteMap[i].val.exists = false;
@@ -42,9 +43,38 @@ module Timeline {
 
     export function drawSelected(unit: Unit) {
       console.log("Tried to draw but didn't work");
-      graphics.beginFill(0x181818);
-      graphics.lineStyle(5, 0x00d9ff, 1);
-      graphics.drawRect(unit.x * TILE_SIZE, unit.y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+      if(selection) selection.destroy();
+      selection = game.add.graphics(0, 0);
+      game.world.bringToTop(selection);
+      selection.lineStyle(2, 0x00d9ff, 1);
+      selection.drawRect(unit.x * TILE_SIZE * SCALE, unit.y * TILE_SIZE * SCALE, TILE_SIZE * SCALE, TILE_SIZE * SCALE);
+    }
+
+    export function drawMoveArea(moveArea) {
+      selection.beginFill(0xffff33);
+      selection.alpha = 0.5;
+
+      for (var i = 0; i < moveArea.length; i++) {
+        var square = moveArea[i];
+
+        selection.drawRect(square.x * TILE_SIZE * SCALE, square.y * TILE_SIZE * SCALE, TILE_SIZE * SCALE, TILE_SIZE * SCALE);
+      }
+    }
+
+    export function moveUnit(unit: Unit, dest: {x: number; y: number;}, callback) {
+      selection.destroy();
+      // Change the coordinates of the units
+      unit.x = dest.x;
+      unit.y = dest.y;
+
+      // Create the tween from the sprite mapped from the unit
+      var tween = game.add.tween(getFromMap(spriteMap, unit).position);
+      // Scale tween
+      dest.x *= TILE_SIZE * SCALE;
+      dest.y *= TILE_SIZE * SCALE;
+
+      tween.to(dest, 500, Phaser.Easing.Quadratic.Out, true);
+      tween.onComplete.add(callback, this);
     }
 
     function getFromMap(map, key) {

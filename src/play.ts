@@ -3,9 +3,12 @@ module Timeline {
   export class Play extends Phaser.State {
     layer: Phaser.TilemapLayer;
     prevTime: number;
+    moveArea: {x: number; y: number;}[];
+    selectedUnit: Unit;
 
     preload() {
       console.log("Preloading Play");
+      Display.cacheGame(this.game);
 
       this.game.load.image("menu-btn", "assets/menu-btn.png");
       this.game.load.tilemap("test-map", "assets/maps/testmap.json", null,
@@ -15,13 +18,12 @@ module Timeline {
       this.game.load.spritesheet("characters", "assets/maps/people.png", 16, 16, 50);
 
       this.game.input.mouse.mouseWheelCallback = mouseWheelCallback.bind(this);
-      this.game.input.onDown.add(onMouseDown, this);
-      this.game.input.onUp.add(onMouseUp, this);
+      this.game.input.onDown.add(this.onMouseDown, this);
+      this.game.input.onUp.add(this.onMouseUp, this);
     }
 
     create() {
       console.log("Creating Play");
-      Display.cacheGame(this.game);
 
       var sprite = this.game.add.sprite(340*SCALE, 50*SCALE, "menu-btn");
       sprite.inputEnabled = true;
@@ -32,6 +34,9 @@ module Timeline {
       map.addTilesetImage("testset", "test-tile-set");
       this.layer.scale.set(SCALE);
 
+      this.moveArea = [];
+      this.prevTime = 0;
+
       var characters = createGameObjectFromLayer("Characters", map);
       var board = new Board(characters);
       GameState.boards.push(board);
@@ -39,7 +44,14 @@ module Timeline {
 
       focusOn(board);
 
-      this.splitGame(board);
+      var newBoard = board.clone();
+      GameState.boards.push(newBoard);
+      newBoard.allCharacters[0].x = 0;
+      newBoard.allCharacters[1].y = 5;
+      newBoard.allCharacters[2].x = 5;
+      newBoard.allCharacters[2].y = 5;
+      Display.loadSpritesFromObjects(newBoard.allCharacters);
+      focusOn(newBoard);
     }
 
     update() {
@@ -50,9 +62,36 @@ module Timeline {
     splitGame(board: Board) {
       var newBoard = board.clone();
       GameState.boards.push(newBoard);
-      newBoard.allCharacters[0].x = 0;
       Display.loadSpritesFromObjects(newBoard.allCharacters);
       focusOn(newBoard);
+    }
+
+    onMouseDown(p) {
+      var characters = GameState.currentBoard.allCharacters;
+      var X = ~~(p.x / (SCALE * TILE_SIZE));
+      var Y = ~~(p.y / (SCALE * TILE_SIZE));
+      for (var i = 0; i < characters.length; i++){
+        if(characters[i].x === X && characters[i].y === Y) {
+          this.moveArea = getMoveArea(characters[i]);
+          this.selectedUnit = characters[i]
+          Display.drawSelected(this.selectedUnit);
+          Display.drawMoveArea(this.moveArea);
+          console.log(characters[i]);
+          return;
+        }
+      }
+
+      for (var i = 0; i < this.moveArea.length; i++) {
+        if(this.moveArea[i].x === X && this.moveArea[i].y === Y) {
+          Display.moveUnit(this.selectedUnit, this.moveArea[i], function() {
+            console.log("Done");
+          });
+        }
+      }
+    }
+
+    onMouseUp(p) {
+      // console.log(p.x, p.y);
     }
   }
 
@@ -61,20 +100,11 @@ module Timeline {
     Display.drawBoard(board);
   }
 
-  function onMouseDown(p) {
-    var characters = GameState.currentBoard.allCharacters;
-    var X = ~~(p.x / (SCALE * TILE_SIZE));
-    var Y = ~~(p.y / (SCALE * TILE_SIZE));
-    for (var i = 0; i < characters.length; i++){
-      if(characters[i].x === X && characters[i].y === Y) {
-        Display.drawSelected(characters[i]);
-        console.log(characters[i]);
-      }
-    }
-  }
-
-  function onMouseUp(p) {
-    // console.log(p.x, p.y);
+  function getMoveArea(unit: Unit): {x: number; y: number;}[] {
+    return [{x: unit.x + 1, y: unit.y},
+            {x: unit.x - 1, y: unit.y},
+            {x: unit.x, y: unit.y + 1},
+            {x: unit.x, y: unit.y - 1}];
   }
 
   function mouseWheelCallback(event) {

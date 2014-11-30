@@ -6,7 +6,6 @@ module Timeline {
     health: number;
     usedAP: number;
     isAlly: number;
-    textureKey: string;
 
     HEALTH: number;
     DAMAGE: number;
@@ -31,7 +30,8 @@ module Timeline {
     }
 
     clone(){
-      var c = new UnitClasses[this.textureKey](this.isAlly);
+      console.log();
+      var c = new UnitClasses[this.constructor.toString().match(/function (\w*)/)[1]](this.isAlly);
       c.x = this.x;
       c.y = this.y;
       c.health = this.health;
@@ -48,7 +48,6 @@ module Timeline {
     RANGE = 1;
     constructor(isAlly: number){
       super(isAlly);
-      this.textureKey = "Warrior";
     }
   }
 
@@ -59,7 +58,6 @@ module Timeline {
     RANGE = 2;
     constructor(isAlly: number){
       super(isAlly);
-      this.textureKey = "Mage";
     }
   }
 
@@ -70,7 +68,6 @@ module Timeline {
     RANGE = 3;
     constructor(isAlly: number){
       super(isAlly);
-      this.textureKey = "Archer";
     }
   }
 
