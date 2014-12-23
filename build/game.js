@@ -23,7 +23,6 @@ var Timeline;
             return;
         };
         Unit.prototype.clone = function () {
-            console.log();
             var c = new Timeline.UnitClasses[this.constructor.toString().match(/function (\w*)/)[1]](this.isAlly);
             c.x = this.x;
             c.y = this.y;
@@ -320,8 +319,9 @@ var Timeline;
             game = g;
             moveArea = game.add.graphics(0, 0);
             // moveArea.lineStyle(2, 0x00d9ff, 1);
-            // moveArea.alpha = 0.5;
+            moveArea.alpha = 0.5;
             movePath = game.add.graphics(0, 0);
+            moveArea.movePath = 0.5;
         }
         Display.cacheGame = cacheGame;
         function loadSpritesFromObjects(arr) {

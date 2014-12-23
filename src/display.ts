@@ -12,9 +12,10 @@ module Timeline {
 
       moveArea = game.add.graphics(0, 0);
       // moveArea.lineStyle(2, 0x00d9ff, 1);
-      // moveArea.alpha = 0.5;
+      moveArea.alpha = 0.5;
 
       movePath = game.add.graphics(0, 0);
+      moveArea.movePath = 0.5;
     }
 
     export function loadSpritesFromObjects(arr: Unit[]) {

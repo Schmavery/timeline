@@ -30,7 +30,6 @@ module Timeline {
     }
 
     clone(){
-      console.log();
       var c = new UnitClasses[this.constructor.toString().match(/function (\w*)/)[1]](this.isAlly);
       c.x = this.x;
       c.y = this.y;
