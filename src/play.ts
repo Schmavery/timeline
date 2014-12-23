@@ -5,6 +5,7 @@ module Timeline {
     prevTime: number;
     moveArea: {x: number; y: number;}[];
     selectedUnit: Unit;
+    currentMovePath: {x: number; y: number;}[];
 
     preload() {
       console.log("Preloading Play");
@@ -35,6 +36,7 @@ module Timeline {
       this.layer.scale.set(SCALE);
 
       this.moveArea = [];
+      this.currentMovePath = [];
       this.prevTime = 0;
 
       var characters = createGameObjectFromLayer("Characters", map);
@@ -74,18 +76,39 @@ module Timeline {
         if(characters[i].x === X && characters[i].y === Y) {
           this.moveArea = getMoveArea(characters[i]);
           this.selectedUnit = characters[i]
-          Display.drawSelected(this.selectedUnit);
+          this.currentMovePath = [];
+          // Display.drawSelected(this.selectedUnit);
           Display.drawMoveArea(this.moveArea);
+
           console.log(characters[i]);
           return;
         }
       }
 
       for (var i = 0; i < this.moveArea.length; i++) {
-        if(this.moveArea[i].x === X && this.moveArea[i].y === Y) {
-          Display.moveUnit(this.selectedUnit, this.moveArea[i], function() {
-            console.log("Done");
-          });
+        var clickedCell = this.moveArea[i];
+        if(clickedCell.x === X && clickedCell.y === Y) {
+          if(contains(this.currentMovePath, clickedCell, comparePoints)) {
+            removeFrom(this.currentMovePath, clickedCell, comparePoints);
+            Display.drawMovePath(this.currentMovePath);
+            return;
+          }
+
+          var last = this.currentMovePath.length > 0 ? this.currentMovePath[this.currentMovePath.length - 1] : this.selectedUnit;
+          if(!isNear(clickedCell, last)) break;
+
+          this.currentMovePath.push(clickedCell);
+          Display.drawMovePath(this.currentMovePath);
+
+          if(this.currentMovePath.length >= 3) {
+            var loop = function(arr, j) {
+              if(j >= arr.length) return;
+              Display.moveUnit(this.selectedUnit, arr[j], function() {
+                loop(arr, j+1);
+              });
+            }.bind(this);
+            loop(this.currentMovePath, 0);
+          }
         }
       }
     }
@@ -95,6 +118,37 @@ module Timeline {
     }
   }
 
+  function isNear(p1, p2) {
+    return (p1.x === p2.x + 1 && p1.y === p2.y) ||
+           (p1.x === p2.x - 1 && p1.y === p2.y) ||
+           (p1.y === p2.y + 1 && p1.x === p2.x) ||
+           (p1.y === p2.y - 1 && p1.x === p2.x);
+  }
+
+  function comparePoints(p1, p2) {
+    return p1.x === p2.x && p1.y === p2.y;
+  }
+
+  function removeFrom(arr, el, f) {
+    var max = arr.length;
+    var i = 0;
+    for (; i < max; i++){
+      if(f(arr[i], el)) break;
+    }
+    arr.splice(i, arr.length);
+  }
+
+  function contains(arr, el, f) {
+    var max = arr.length;
+    for (var i = 0; i < max; i++){
+      if(f(arr[i], el)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   function focusOn(board: Board) {
     GameState.currentBoard = board;
     Display.drawBoard(board);
@@ -102,9 +156,29 @@ module Timeline {
 
   function getMoveArea(unit: Unit): {x: number; y: number;}[] {
     return [{x: unit.x + 1, y: unit.y},
+            {x: unit.x + 1, y: unit.y + 1},
+            {x: unit.x + 1, y: unit.y - 1},
+            {x: unit.x + 2, y: unit.y},
+            {x: unit.x + 3, y: unit.y},
+            {x: unit.x + 2, y: unit.y + 1},
+            {x: unit.x + 2, y: unit.y - 1},
             {x: unit.x - 1, y: unit.y},
+            {x: unit.x - 1, y: unit.y + 1},
+            {x: unit.x - 1, y: unit.y - 1},
+            {x: unit.x - 2, y: unit.y},
+            {x: unit.x - 3, y: unit.y},
+            {x: unit.x - 2, y: unit.y + 1},
+            {x: unit.x - 2, y: unit.y - 1},
             {x: unit.x, y: unit.y + 1},
-            {x: unit.x, y: unit.y - 1}];
+            {x: unit.x, y: unit.y + 2},
+            {x: unit.x, y: unit.y + 3},
+            {x: unit.x + 1, y: unit.y + 2},
+            {x: unit.x - 1, y: unit.y + 2},
+            {x: unit.x, y: unit.y - 1},
+            {x: unit.x, y: unit.y - 2},
+            {x: unit.x, y: unit.y - 3},
+            {x: unit.x + 1, y: unit.y - 2},
+            {x: unit.x - 1, y: unit.y - 2}];
   }
 
   function mouseWheelCallback(event) {

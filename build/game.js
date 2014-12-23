@@ -138,6 +138,7 @@ var Timeline;
             map.addTilesetImage("testset", "test-tile-set");
             this.layer.scale.set(Timeline.SCALE);
             this.moveArea = [];
+            this.currentMovePath = [];
             this.prevTime = 0;
             var characters = createGameObjectFromLayer("Characters", map);
             var board = new Timeline.Board(characters);
@@ -169,17 +170,36 @@ var Timeline;
                 if (characters[i].x === X && characters[i].y === Y) {
                     this.moveArea = getMoveArea(characters[i]);
                     this.selectedUnit = characters[i];
-                    Timeline.Display.drawSelected(this.selectedUnit);
+                    this.currentMovePath = [];
+                    // Display.drawSelected(this.selectedUnit);
                     Timeline.Display.drawMoveArea(this.moveArea);
                     console.log(characters[i]);
                     return;
                 }
             }
             for (var i = 0; i < this.moveArea.length; i++) {
-                if (this.moveArea[i].x === X && this.moveArea[i].y === Y) {
-                    Timeline.Display.moveUnit(this.selectedUnit, this.moveArea[i], function () {
-                        console.log("Done");
-                    });
+                var clickedCell = this.moveArea[i];
+                if (clickedCell.x === X && clickedCell.y === Y) {
+                    if (contains(this.currentMovePath, clickedCell, comparePoints)) {
+                        removeFrom(this.currentMovePath, clickedCell, comparePoints);
+                        Timeline.Display.drawMovePath(this.currentMovePath);
+                        return;
+                    }
+                    var last = this.currentMovePath.length > 0 ? this.currentMovePath[this.currentMovePath.length - 1] : this.selectedUnit;
+                    if (!isNear(clickedCell, last))
+                        break;
+                    this.currentMovePath.push(clickedCell);
+                    Timeline.Display.drawMovePath(this.currentMovePath);
+                    if (this.currentMovePath.length >= 3) {
+                        var loop = function (arr, j) {
+                            if (j >= arr.length)
+                                return;
+                            Timeline.Display.moveUnit(this.selectedUnit, arr[j], function () {
+                                loop(arr, j + 1);
+                            });
+                        }.bind(this);
+                        loop(this.currentMovePath, 0);
+                    }
                 }
             }
         };
@@ -189,12 +209,36 @@ var Timeline;
         return Play;
     })(Phaser.State);
     Timeline.Play = Play;
+    function isNear(p1, p2) {
+        return (p1.x === p2.x + 1 && p1.y === p2.y) || (p1.x === p2.x - 1 && p1.y === p2.y) || (p1.y === p2.y + 1 && p1.x === p2.x) || (p1.y === p2.y - 1 && p1.x === p2.x);
+    }
+    function comparePoints(p1, p2) {
+        return p1.x === p2.x && p1.y === p2.y;
+    }
+    function removeFrom(arr, el, f) {
+        var max = arr.length;
+        var i = 0;
+        for (; i < max; i++) {
+            if (f(arr[i], el))
+                break;
+        }
+        arr.splice(i, arr.length);
+    }
+    function contains(arr, el, f) {
+        var max = arr.length;
+        for (var i = 0; i < max; i++) {
+            if (f(arr[i], el)) {
+                return true;
+            }
+        }
+        return false;
+    }
     function focusOn(board) {
         Timeline.GameState.currentBoard = board;
         Timeline.Display.drawBoard(board);
     }
     function getMoveArea(unit) {
-        return [{ x: unit.x + 1, y: unit.y }, { x: unit.x - 1, y: unit.y }, { x: unit.x, y: unit.y + 1 }, { x: unit.x, y: unit.y - 1 }];
+        return [{ x: unit.x + 1, y: unit.y }, { x: unit.x + 1, y: unit.y + 1 }, { x: unit.x + 1, y: unit.y - 1 }, { x: unit.x + 2, y: unit.y }, { x: unit.x + 3, y: unit.y }, { x: unit.x + 2, y: unit.y + 1 }, { x: unit.x + 2, y: unit.y - 1 }, { x: unit.x - 1, y: unit.y }, { x: unit.x - 1, y: unit.y + 1 }, { x: unit.x - 1, y: unit.y - 1 }, { x: unit.x - 2, y: unit.y }, { x: unit.x - 3, y: unit.y }, { x: unit.x - 2, y: unit.y + 1 }, { x: unit.x - 2, y: unit.y - 1 }, { x: unit.x, y: unit.y + 1 }, { x: unit.x, y: unit.y + 2 }, { x: unit.x, y: unit.y + 3 }, { x: unit.x + 1, y: unit.y + 2 }, { x: unit.x - 1, y: unit.y + 2 }, { x: unit.x, y: unit.y - 1 }, { x: unit.x, y: unit.y - 2 }, { x: unit.x, y: unit.y - 3 }, { x: unit.x + 1, y: unit.y - 2 }, { x: unit.x - 1, y: unit.y - 2 }];
     }
     function mouseWheelCallback(event) {
         var curTime = Date.now();
@@ -270,9 +314,14 @@ var Timeline;
     (function (Display) {
         var spriteMap = [];
         var game = null;
-        var selection = null;
+        var moveArea = null;
+        var movePath = null;
         function cacheGame(g) {
             game = g;
+            moveArea = game.add.graphics(0, 0);
+            // moveArea.lineStyle(2, 0x00d9ff, 1);
+            // moveArea.alpha = 0.5;
+            movePath = game.add.graphics(0, 0);
         }
         Display.cacheGame = cacheGame;
         function loadSpritesFromObjects(arr) {
@@ -294,8 +343,8 @@ var Timeline;
         }
         Display.moveObject = moveObject;
         function drawBoard(board) {
-            if (selection)
-                selection.destroy();
+            moveArea.clear();
+            movePath.clear();
             for (var i = 0; i < spriteMap.length; i++) {
                 spriteMap[i].val.exists = false;
             }
@@ -306,27 +355,41 @@ var Timeline;
             }
         }
         Display.drawBoard = drawBoard;
-        function drawSelected(unit) {
-            console.log("Tried to draw but didn't work");
-            if (selection)
-                selection.destroy();
-            selection = game.add.graphics(0, 0);
-            game.world.bringToTop(selection);
-            selection.lineStyle(2, 0x00d9ff, 1);
-            selection.drawRect(unit.x * Timeline.TILE_SIZE * Timeline.SCALE, unit.y * Timeline.TILE_SIZE * Timeline.SCALE, Timeline.TILE_SIZE * Timeline.SCALE, Timeline.TILE_SIZE * Timeline.SCALE);
-        }
-        Display.drawSelected = drawSelected;
-        function drawMoveArea(moveArea) {
-            selection.beginFill(0xffff33);
-            selection.alpha = 0.5;
-            for (var i = 0; i < moveArea.length; i++) {
-                var square = moveArea[i];
-                selection.drawRect(square.x * Timeline.TILE_SIZE * Timeline.SCALE, square.y * Timeline.TILE_SIZE * Timeline.SCALE, Timeline.TILE_SIZE * Timeline.SCALE, Timeline.TILE_SIZE * Timeline.SCALE);
+        // export function drawSelected(unit: Unit) {
+        //   if(moveArea) moveArea.destroy();
+        //   moveArea = game.add.graphics(0, 0);
+        //   game.world.bringToTop(moveArea);
+        //   moveArea.lineStyle(2, 0x00d9ff, 1);
+        //   // moveArea.drawRect(unit.x * TILE_SIZE * SCALE, unit.y * TILE_SIZE * SCALE, TILE_SIZE * SCALE, TILE_SIZE * SCALE);
+        // }
+        function drawMoveArea(area) {
+            moveArea.clear();
+            movePath.clear();
+            game.world.bringToTop(moveArea);
+            moveArea.lineStyle(2, 0x00d9ff, 1);
+            moveArea.beginFill(0xffff33);
+            for (var i = 0; i < area.length; i++) {
+                var square = area[i];
+                moveArea.drawRect(square.x * Timeline.TILE_SIZE * Timeline.SCALE, square.y * Timeline.TILE_SIZE * Timeline.SCALE, Timeline.TILE_SIZE * Timeline.SCALE, Timeline.TILE_SIZE * Timeline.SCALE);
             }
+            moveArea.endFill();
         }
         Display.drawMoveArea = drawMoveArea;
+        function drawMovePath(path) {
+            movePath.clear();
+            game.world.bringToTop(movePath);
+            movePath.beginFill(0xff0033);
+            movePath.alpha = 0.5;
+            for (var i = 0; i < path.length; i++) {
+                var square = path[i];
+                movePath.drawRect(square.x * Timeline.TILE_SIZE * Timeline.SCALE, square.y * Timeline.TILE_SIZE * Timeline.SCALE, Timeline.TILE_SIZE * Timeline.SCALE, Timeline.TILE_SIZE * Timeline.SCALE);
+            }
+            movePath.endFill();
+        }
+        Display.drawMovePath = drawMovePath;
         function moveUnit(unit, dest, callback) {
-            selection.destroy();
+            moveArea.clear();
+            movePath.clear();
             // Change the coordinates of the units
             var X = unit.x * Timeline.TILE_SIZE * Timeline.SCALE;
             var Y = unit.y * Timeline.TILE_SIZE * Timeline.SCALE;
@@ -353,7 +416,7 @@ var Timeline;
                     anim = sprite.play("moveDown");
                 }
             }
-            tween.to(dest, 500, Phaser.Easing.Quadratic.Out, true);
+            tween.to(dest, 500, Phaser.Easing.Linear.None, true);
             tween.onComplete.add(function () {
                 anim.complete();
                 callback();
