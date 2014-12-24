@@ -23,9 +23,13 @@ module Timeline {
         var sprite = game.add.sprite(SCALE * TILE_SIZE * u.x, SCALE * TILE_SIZE * u.y, "characters");
         sprite.scale.set(SCALE);
         sprite.animations.add('moveLeft', [20, 21, 22, 23], 10, true);
+        sprite.animations.add('doneMovingLeft', [20], 10, true);
         sprite.animations.add('moveDown', [0, 1, 2, 3], 10, true);
+        sprite.animations.add('doneMovingDown', [0], 10, true);
         sprite.animations.add('moveUp', [4, 5, 6, 7], 10, true);
+        sprite.animations.add('doneMovingUp', [4], 10, true);
         sprite.animations.add('moveRight', [16, 17, 18, 19], 10, true);
+        sprite.animations.add('doneMovingRight', [16], 10, true);
         sprite.exists = false;
         pushInMap(spriteMap, u, sprite);
       });
@@ -94,38 +98,65 @@ module Timeline {
       movePath.endFill();
     }
 
-    export function moveUnit(unit: Unit, dest: {x: number; y: number;}, callback) {
+    export function moveUnitAlongPath(unit: Unit, path: {x: number; y: number;}[], callback) {
       moveArea.clear();
       movePath.clear();
 
+      var loop = function(arr, j) {
+        if(j >= arr.length) {
+          // var sprite = getFromMap(spriteMap, unit);
+          // var anim = sprite.play("idle");
+          // console.log(anim);
+          // anim.complete();
+          return callback(unit);
+        }
+        Display.moveUnit(unit, arr[j], function() {
+          loop(arr, j+1);
+        });
+      };
+      loop(path, 0);
+    }
+
+    export function moveUnit(unit: Unit, dest: {x: number; y: number;}, callback) {
       // Change the coordinates of the units
       var X = unit.x * TILE_SIZE * SCALE;
       var Y = unit.y * TILE_SIZE * SCALE;
-      unit.x = dest.x;
-      unit.y = dest.y;
+      var clonedDest = {
+        x: dest.x,
+        y: dest.y
+      }
+      unit.x = clonedDest.x;
+      unit.y = clonedDest.y;
 
       // Create the tween from the sprite mapped from the unit
       var sprite = getFromMap(spriteMap, unit);
       var tween = game.add.tween(sprite.position);
       // Scale tween
-      dest.x *= TILE_SIZE * SCALE;
-      dest.y *= TILE_SIZE * SCALE;
+      clonedDest.x *= TILE_SIZE * SCALE;
+      clonedDest.y *= TILE_SIZE * SCALE;
 
       var anim: Phaser.Animation;
-      if(dest.x - X < 0) {
+      var direction = "Left";
+      if(clonedDest.x - X < 0) {
         anim = sprite.play("moveLeft");
-      } else if (dest.x - X > 0) {
+        direction = "Left";
+      } else if (clonedDest.x - X > 0) {
         anim = sprite.play("moveRight");
+        direction = "Right";
       } else {
-        if(dest.y - Y < 0) {
+        if(clonedDest.y - Y < 0) {
           anim = sprite.play("moveUp");
+          direction = "Up";
         } else {
           anim = sprite.play("moveDown");
+          direction = "Down";
         }
       }
 
-      tween.to(dest, 500, Phaser.Easing.Linear.None, true);
+      tween.to(clonedDest, 500, Phaser.Easing.Linear.None, true);
       tween.onComplete.add(function() {
+        anim.complete();
+        anim = sprite.play("doneMoving" + direction);
         anim.complete();
         callback();
       }, this);

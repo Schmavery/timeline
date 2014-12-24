@@ -6,6 +6,8 @@ module Timeline {
     health: number;
     usedAP: number;
     isAlly: number;
+    moveDistance: number;
+    isMoving: boolean;
 
     HEALTH: number;
     DAMAGE: number;
@@ -16,8 +18,10 @@ module Timeline {
       this.health = this.HEALTH;
       this.usedAP = 0;
       this.isAlly = isAlly;
+      this.moveDistance = 0;
       this.x = 0;
       this.y = 0;
+      this.isMoving = false;
     }
 
     setPosition(x: number, y: number) {
@@ -47,6 +51,7 @@ module Timeline {
     RANGE = 1;
     constructor(isAlly: number){
       super(isAlly);
+      this.moveDistance = 5;
     }
   }
 
@@ -57,6 +62,7 @@ module Timeline {
     RANGE = 2;
     constructor(isAlly: number){
       super(isAlly);
+      this.moveDistance = 2;
     }
   }
 
@@ -67,6 +73,7 @@ module Timeline {
     RANGE = 3;
     constructor(isAlly: number){
       super(isAlly);
+      this.moveDistance = 3;
     }
   }
 
