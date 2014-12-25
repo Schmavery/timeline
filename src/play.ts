@@ -6,6 +6,8 @@ module Timeline {
     moveArea: {x: number; y: number;}[];
     selectedUnit: Unit;
     movePath: {x: number; y: number;}[];
+    keyboard: Phaser.Keyboard;
+    currentTurnActions;
 
     preload() {
       console.log("Preloading Play");
@@ -21,6 +23,14 @@ module Timeline {
       this.game.input.mouse.mouseWheelCallback = mouseWheelCallback.bind(this);
       this.game.input.onDown.add(this.onMouseDown, this);
       this.game.input.onUp.add(this.onMouseUp, this);
+
+      this.moveArea = [];
+      this.movePath = [];
+      this.currentTurnActions = [];
+      this.prevTime = 0;
+
+      this.game.input.keyboard.onUpCallback = this.onKeyUp.bind(this);
+      this.game.input.keyboard.onDownCallback = this.onKeyDown.bind(this);
     }
 
     create() {
@@ -28,16 +38,13 @@ module Timeline {
 
       var sprite = this.game.add.sprite(340*SCALE, 50*SCALE, "menu-btn");
       sprite.inputEnabled = true;
-      sprite.events.onInputDown.add(() => {this.game.state.start("Menu")}, this);
+      sprite.events.onInputDown.add(this.playTurn.bind(this), this);
 
       var map = this.game.add.tilemap("test-map");
       this.layer = map.createLayer("Tile Layer 1");
       map.addTilesetImage("testset", "test-tile-set");
       this.layer.scale.set(SCALE);
 
-      this.moveArea = [];
-      this.movePath = [];
-      this.prevTime = 0;
 
       var characters = createGameObjectFromLayer("Characters", map);
       var board = new Board(characters);
@@ -112,14 +119,18 @@ module Timeline {
           Display.drawMovePath(this.movePath);
 
           if(this.movePath.length === this.selectedUnit.moveDistance) {
+            this.currentTurnActions.push(partial(function(unit, path) {
+              unit.isMoving = true;
+
+              // Remove the empty callback when figured out the optional type
+              // in TS
+              Display.moveUnitAlongPath(unit, path, function(u) {
+                // reset isMoving so we can select the unit again
+                u.isMoving = false;
+              });
+            }, this.selectedUnit, this.movePath));
+
             // This is just to avoid being able to select a moving unit
-            this.selectedUnit.isMoving = true;
-            // Remove the empty callback when figured out the optional type
-            // in TS
-            Display.moveUnitAlongPath(this.selectedUnit, this.movePath, function(unit) {
-              // reset isMoving so we can select the unit again
-              unit.isMoving = false;
-            });
 
             // Reset those just in case
             this.movePath = [];
@@ -132,7 +143,24 @@ module Timeline {
     onMouseUp(p) {
       // console.log(p.x, p.y);
     }
+
+    onKeyUp(e) {
+      if(e.keyCode === 32) {
+        this.playTurn();
+      }
+    }
+
+    onKeyDown(e) {
+      // for (var i in e){
+      //   console.log(i, ":", e[i]);
+      // }
+    }
+
+    playTurn() {
+      this.currentTurnActions.map((x) => {x();});
+    }
   }
+
 
   // Returns a path from the start to the end within the given space
   function findPath(space, start, end): {x: number; y: number;}[] {
@@ -304,5 +332,17 @@ module Timeline {
     }
 
     return ret;
+  }
+
+
+
+  function partial(fn: Function, ...args: any[]) {
+    var slice = Array.prototype.slice;
+    var stored_args = slice.call(arguments, 1);
+    return function () {
+      var new_args = slice.call(arguments);
+      var args = stored_args.concat(new_args);
+      return fn.apply(null, args);
+    };
   }
 }

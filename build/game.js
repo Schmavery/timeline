@@ -128,22 +128,22 @@ var Timeline;
             this.game.input.mouse.mouseWheelCallback = mouseWheelCallback.bind(this);
             this.game.input.onDown.add(this.onMouseDown, this);
             this.game.input.onUp.add(this.onMouseUp, this);
+            this.moveArea = [];
+            this.movePath = [];
+            this.currentTurnActions = [];
+            this.prevTime = 0;
+            this.game.input.keyboard.onUpCallback = this.onKeyUp.bind(this);
+            this.game.input.keyboard.onDownCallback = this.onKeyDown.bind(this);
         };
         Play.prototype.create = function () {
-            var _this = this;
             console.log("Creating Play");
             var sprite = this.game.add.sprite(340 * Timeline.SCALE, 50 * Timeline.SCALE, "menu-btn");
             sprite.inputEnabled = true;
-            sprite.events.onInputDown.add(function () {
-                _this.game.state.start("Menu");
-            }, this);
+            sprite.events.onInputDown.add(this.playTurn.bind(this), this);
             var map = this.game.add.tilemap("test-map");
             this.layer = map.createLayer("Tile Layer 1");
             map.addTilesetImage("testset", "test-tile-set");
             this.layer.scale.set(Timeline.SCALE);
-            this.moveArea = [];
-            this.movePath = [];
-            this.prevTime = 0;
             var characters = createGameObjectFromLayer("Characters", map);
             var board = new Timeline.Board(characters);
             Timeline.GameState.boards.push(board);
@@ -202,14 +202,16 @@ var Timeline;
                     }
                     Timeline.Display.drawMovePath(this.movePath);
                     if (this.movePath.length === this.selectedUnit.moveDistance) {
+                        this.currentTurnActions.push(partial(function (unit, path) {
+                            unit.isMoving = true;
+                            // Remove the empty callback when figured out the optional type
+                            // in TS
+                            Timeline.Display.moveUnitAlongPath(unit, path, function (u) {
+                                // reset isMoving so we can select the unit again
+                                u.isMoving = false;
+                            });
+                        }, this.selectedUnit, this.movePath));
                         // This is just to avoid being able to select a moving unit
-                        this.selectedUnit.isMoving = true;
-                        // Remove the empty callback when figured out the optional type
-                        // in TS
-                        Timeline.Display.moveUnitAlongPath(this.selectedUnit, this.movePath, function (unit) {
-                            // reset isMoving so we can select the unit again
-                            unit.isMoving = false;
-                        });
                         // Reset those just in case
                         this.movePath = [];
                         this.moveArea = [];
@@ -219,6 +221,21 @@ var Timeline;
         };
         Play.prototype.onMouseUp = function (p) {
             // console.log(p.x, p.y);
+        };
+        Play.prototype.onKeyUp = function (e) {
+            if (e.keyCode === 32) {
+                this.playTurn();
+            }
+        };
+        Play.prototype.onKeyDown = function (e) {
+            // for (var i in e){
+            //   console.log(i, ":", e[i]);
+            // }
+        };
+        Play.prototype.playTurn = function () {
+            this.currentTurnActions.map(function (x) {
+                x();
+            });
         };
         return Play;
     })(Phaser.State);
@@ -366,6 +383,19 @@ var Timeline;
             ret.push(character);
         }
         return ret;
+    }
+    function partial(fn) {
+        var args = [];
+        for (var _i = 1; _i < arguments.length; _i++) {
+            args[_i - 1] = arguments[_i];
+        }
+        var slice = Array.prototype.slice;
+        var stored_args = slice.call(arguments, 1);
+        return function () {
+            var new_args = slice.call(arguments);
+            var args = stored_args.concat(new_args);
+            return fn.apply(null, args);
+        };
     }
 })(Timeline || (Timeline = {}));
 /// <reference path="references.ts" />
