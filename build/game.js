@@ -16,6 +16,7 @@ var Timeline;
             this.x = 0;
             this.y = 0;
             this.isMoving = false;
+            this.nextMovePath = [];
         }
         Unit.prototype.setPosition = function (x, y) {
             this.x = x;
@@ -25,6 +26,7 @@ var Timeline;
             return;
         };
         Unit.prototype.clone = function () {
+            // Very hacky yet so beautiful
             var c = new Timeline.UnitClasses[this.constructor.toString().match(/function (\w*)/)[1]](this.isAlly);
             c.x = this.x;
             c.y = this.y;
@@ -129,8 +131,6 @@ var Timeline;
             this.game.input.onDown.add(this.onMouseDown, this);
             this.game.input.onUp.add(this.onMouseUp, this);
             this.moveArea = [];
-            this.movePath = [];
-            this.currentTurnActions = [];
             this.prevTime = 0;
             this.game.input.keyboard.onUpCallback = this.onKeyUp.bind(this);
             this.game.input.keyboard.onDownCallback = this.onKeyDown.bind(this);
@@ -170,52 +170,36 @@ var Timeline;
             var characters = Timeline.GameState.currentBoard.allCharacters;
             var X = ~~(p.x / (Timeline.SCALE * Timeline.TILE_SIZE));
             var Y = ~~(p.y / (Timeline.SCALE * Timeline.TILE_SIZE));
+            var shouldStopHere = false;
             for (var i = 0; i < characters.length; i++) {
                 if (characters[i].x === X && characters[i].y === Y && !characters[i].isMoving) {
                     this.moveArea = getMoveArea(characters[i], characters[i].moveDistance);
                     this.selectedUnit = characters[i];
-                    this.movePath = [];
                     Timeline.Display.drawMoveArea(this.moveArea);
+                    Timeline.Display.drawMovePath(this.selectedUnit);
                     console.log(characters[i]);
-                    return;
+                    shouldStopHere = true;
                 }
             }
+            if (shouldStopHere)
+                return;
             for (var i = 0; i < this.moveArea.length; i++) {
                 var clickedCell = this.moveArea[i];
                 if (clickedCell.x === X && clickedCell.y === Y) {
-                    if (contains(this.movePath, clickedCell, comparePoints)) {
-                        removeFrom(this.movePath, clickedCell, comparePoints);
-                        Timeline.Display.drawMovePath(this.movePath);
+                    if (contains(this.selectedUnit.nextMovePath, clickedCell, comparePoints)) {
+                        removeFrom(this.selectedUnit.nextMovePath, clickedCell, comparePoints);
+                        Timeline.Display.drawMovePath(this.selectedUnit);
                         break;
                     }
-                    var lastCellInPath = this.movePath.length > 0 ? this.movePath[this.movePath.length - 1] : this.selectedUnit;
+                    var lastCellInPath = this.selectedUnit.nextMovePath.length > 0 ? this.selectedUnit.nextMovePath[this.selectedUnit.nextMovePath.length - 1] : this.selectedUnit;
                     if (!isNear(clickedCell, lastCellInPath)) {
-                        // Reset the movePath because we don't want the user to build
-                        // partial paths using our pathfind algorithm
-                        // The user can either build a precise path, or get a  generated
-                        // one
                         var tmp = findPath(this.moveArea, lastCellInPath, clickedCell);
-                        this.movePath = this.movePath.concat(tmp.slice(0, this.selectedUnit.moveDistance - this.movePath.length));
+                        this.selectedUnit.nextMovePath = this.selectedUnit.nextMovePath.concat(tmp.slice(0, this.selectedUnit.moveDistance - this.selectedUnit.nextMovePath.length));
                     }
                     else {
-                        this.movePath.push(clickedCell);
+                        this.selectedUnit.nextMovePath.push(clickedCell);
                     }
-                    Timeline.Display.drawMovePath(this.movePath);
-                    if (this.movePath.length === this.selectedUnit.moveDistance) {
-                        this.currentTurnActions.push(partial(function (unit, path) {
-                            unit.isMoving = true;
-                            // Remove the empty callback when figured out the optional type
-                            // in TS
-                            Timeline.Display.moveUnitAlongPath(unit, path, function (u) {
-                                // reset isMoving so we can select the unit again
-                                u.isMoving = false;
-                            });
-                        }, this.selectedUnit, this.movePath));
-                        // This is just to avoid being able to select a moving unit
-                        // Reset those just in case
-                        this.movePath = [];
-                        this.moveArea = [];
-                    }
+                    Timeline.Display.drawMovePath(this.selectedUnit);
                 }
             }
         };
@@ -233,9 +217,20 @@ var Timeline;
             // }
         };
         Play.prototype.playTurn = function () {
-            this.currentTurnActions.map(function (x) {
-                x();
-            });
+            var characters = Timeline.GameState.currentBoard.allCharacters;
+            var max = characters.length;
+            for (var i = 0; i < max; i++) {
+                if (characters[i].nextMovePath.length > 1) {
+                    characters[i].isMoving = true;
+                    // Remove the empty callback when figured out the optional type
+                    // in TS
+                    Timeline.Display.moveUnitAlongPath(characters[i], characters[i].nextMovePath, function (u) {
+                        // reset isMoving so we can select the unit again
+                        u.isMoving = false;
+                        u.nextMovePath = [];
+                    });
+                }
+            }
         };
         return Play;
     })(Phaser.State);
@@ -448,6 +443,7 @@ var Timeline;
 (function (Timeline) {
     var Display;
     (function (Display) {
+        var movePathMap = [];
         var spriteMap = [];
         var game = null;
         var moveArea = null;
@@ -457,7 +453,7 @@ var Timeline;
             moveArea = game.add.graphics(0, 0);
             // moveArea.lineStyle(2, 0x00d9ff, 1);
             moveArea.alpha = 0.5;
-            movePath = game.add.graphics(0, 0);
+            // movePath = game.add.graphics(0, 0);
             moveArea.movePath = 0.5;
         }
         Display.cacheGame = cacheGame;
@@ -475,6 +471,7 @@ var Timeline;
                 sprite.animations.add('doneMovingRight', [16], 10, true);
                 sprite.exists = false;
                 pushInMap(spriteMap, u, sprite);
+                pushInMap(movePathMap, u, game.add.graphics(0, 0));
             });
         }
         Display.loadSpritesFromObjects = loadSpritesFromObjects;
@@ -485,7 +482,6 @@ var Timeline;
         Display.moveObject = moveObject;
         function drawBoard(board) {
             moveArea.clear();
-            movePath.clear();
             for (var i = 0; i < spriteMap.length; i++) {
                 spriteMap[i].val.exists = false;
             }
@@ -505,7 +501,6 @@ var Timeline;
         // }
         function drawMoveArea(area) {
             moveArea.clear();
-            movePath.clear();
             game.world.bringToTop(moveArea);
             moveArea.lineStyle(2, 0x00d9ff, 1);
             moveArea.beginFill(0xffff33);
@@ -516,9 +511,14 @@ var Timeline;
             moveArea.endFill();
         }
         Display.drawMoveArea = drawMoveArea;
-        function drawMovePath(path) {
+        function drawMovePath(unit) {
+            __drawMovePath(unit.nextMovePath, getFromMap(movePathMap, unit));
+        }
+        Display.drawMovePath = drawMovePath;
+        function __drawMovePath(path, movePath) {
             movePath.clear();
             game.world.bringToTop(movePath);
+            movePath.lineStyle(2, 0x00d9ff, 1);
             movePath.beginFill(0xff0033);
             movePath.alpha = 0.5;
             for (var i = 0; i < path.length; i++) {
@@ -527,10 +527,9 @@ var Timeline;
             }
             movePath.endFill();
         }
-        Display.drawMovePath = drawMovePath;
         function moveUnitAlongPath(unit, path, callback) {
             moveArea.clear();
-            movePath.clear();
+            getFromMap(movePathMap, unit).clear();
             var loop = function (arr, j) {
                 if (j >= arr.length) {
                     // var sprite = getFromMap(spriteMap, unit);

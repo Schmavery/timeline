@@ -2,6 +2,7 @@
 
 module Timeline {
   export module Display {
+    var movePathMap: {key: Unit; val: Phaser.Graphics}[] = [];
     var spriteMap: {key: Unit; val: Phaser.Sprite}[] = [];
     var game = null;
     var moveArea = null;
@@ -14,7 +15,7 @@ module Timeline {
       // moveArea.lineStyle(2, 0x00d9ff, 1);
       moveArea.alpha = 0.5;
 
-      movePath = game.add.graphics(0, 0);
+      // movePath = game.add.graphics(0, 0);
       moveArea.movePath = 0.5;
     }
 
@@ -32,6 +33,7 @@ module Timeline {
         sprite.animations.add('doneMovingRight', [16], 10, true);
         sprite.exists = false;
         pushInMap(spriteMap, u, sprite);
+        pushInMap(movePathMap, u, game.add.graphics(0, 0));
       });
     }
 
@@ -42,7 +44,6 @@ module Timeline {
 
     export function drawBoard(board: Board) {
       moveArea.clear();
-      movePath.clear();
 
       // Hide all the other sprites
       for (var i = 0; i < spriteMap.length; i++) {
@@ -68,7 +69,6 @@ module Timeline {
 
     export function drawMoveArea(area: {x: number; y: number;}[]) {
       moveArea.clear();
-      movePath.clear();
 
       game.world.bringToTop(moveArea);
       moveArea.lineStyle(2, 0x00d9ff, 1);
@@ -83,9 +83,15 @@ module Timeline {
       moveArea.endFill();
     }
 
-    export function drawMovePath(path: {x: number; y: number;}[]) {
+    export function drawMovePath(unit: Unit) {
+      __drawMovePath(unit.nextMovePath, getFromMap(movePathMap, unit));
+    }
+
+    function __drawMovePath(path: {x: number; y: number;}[], movePath: Phaser.Graphics) {
       movePath.clear();
+
       game.world.bringToTop(movePath);
+      movePath.lineStyle(2, 0x00d9ff, 1);
       movePath.beginFill(0xff0033);
       movePath.alpha = 0.5;
 
@@ -100,7 +106,7 @@ module Timeline {
 
     export function moveUnitAlongPath(unit: Unit, path: {x: number; y: number;}[], callback) {
       moveArea.clear();
-      movePath.clear();
+      getFromMap(movePathMap, unit).clear();
 
       var loop = function(arr, j) {
         if(j >= arr.length) {

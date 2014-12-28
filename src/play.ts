@@ -5,9 +5,7 @@ module Timeline {
     prevTime: number;
     moveArea: {x: number; y: number;}[];
     selectedUnit: Unit;
-    movePath: {x: number; y: number;}[];
     keyboard: Phaser.Keyboard;
-    currentTurnActions;
 
     preload() {
       console.log("Preloading Play");
@@ -25,8 +23,6 @@ module Timeline {
       this.game.input.onUp.add(this.onMouseUp, this);
 
       this.moveArea = [];
-      this.movePath = [];
-      this.currentTurnActions = [];
       this.prevTime = 0;
 
       this.game.input.keyboard.onUpCallback = this.onKeyUp.bind(this);
@@ -79,63 +75,41 @@ module Timeline {
       var characters = GameState.currentBoard.allCharacters;
       var X = ~~(p.x / (SCALE * TILE_SIZE));
       var Y = ~~(p.y / (SCALE * TILE_SIZE));
+      var shouldStopHere = false;
+
       for (var i = 0; i < characters.length; i++){
         if(characters[i].x === X && characters[i].y === Y && !characters[i].isMoving) {
           this.moveArea = getMoveArea(characters[i], characters[i].moveDistance);
           this.selectedUnit = characters[i]
-          this.movePath = [];
 
           Display.drawMoveArea(this.moveArea);
-
+          Display.drawMovePath(this.selectedUnit);
           console.log(characters[i]);
-          return;
+          shouldStopHere = true;
         }
       }
-
+      if(shouldStopHere) return;
       for (var i = 0; i < this.moveArea.length; i++) {
         var clickedCell = this.moveArea[i];
         if(clickedCell.x === X && clickedCell.y === Y) {
-          if(contains(this.movePath, clickedCell, comparePoints)) {
-            removeFrom(this.movePath, clickedCell, comparePoints);
-            Display.drawMovePath(this.movePath);
+          if(contains(this.selectedUnit.nextMovePath, clickedCell, comparePoints)) {
+            removeFrom(this.selectedUnit.nextMovePath, clickedCell, comparePoints);
+            Display.drawMovePath(this.selectedUnit);
             break;
           }
 
-          var lastCellInPath = this.movePath.length > 0 ?
-                               this.movePath[this.movePath.length - 1] :
+          var lastCellInPath = this.selectedUnit.nextMovePath.length > 0 ?
+                               this.selectedUnit.nextMovePath[this.selectedUnit.nextMovePath.length - 1] :
                                this.selectedUnit;
 
           if(!isNear(clickedCell, lastCellInPath)) {
-            // Reset the movePath because we don't want the user to build
-            // partial paths using our pathfind algorithm
-            // The user can either build a precise path, or get a  generated
-            // one
             var tmp = findPath(this.moveArea, lastCellInPath, clickedCell);
-            this.movePath = this.movePath.concat(tmp.slice(0, this.selectedUnit.moveDistance - this.movePath.length));
+            this.selectedUnit.nextMovePath = this.selectedUnit.nextMovePath.concat(tmp.slice(0, this.selectedUnit.moveDistance - this.selectedUnit.nextMovePath.length));
           } else {
-            this.movePath.push(clickedCell);
+            this.selectedUnit.nextMovePath.push(clickedCell);
           }
 
-          Display.drawMovePath(this.movePath);
-
-          if(this.movePath.length === this.selectedUnit.moveDistance) {
-            this.currentTurnActions.push(partial(function(unit, path) {
-              unit.isMoving = true;
-
-              // Remove the empty callback when figured out the optional type
-              // in TS
-              Display.moveUnitAlongPath(unit, path, function(u) {
-                // reset isMoving so we can select the unit again
-                u.isMoving = false;
-              });
-            }, this.selectedUnit, this.movePath));
-
-            // This is just to avoid being able to select a moving unit
-
-            // Reset those just in case
-            this.movePath = [];
-            this.moveArea = [];
-          }
+          Display.drawMovePath(this.selectedUnit);
         }
       }
     }
@@ -157,7 +131,20 @@ module Timeline {
     }
 
     playTurn() {
-      this.currentTurnActions.map((x) => {x();});
+      var characters = GameState.currentBoard.allCharacters;
+      var max = characters.length;
+      for (var i = 0; i < max; i++){
+        if(characters[i].nextMovePath.length > 1) {
+          characters[i].isMoving = true;
+          // Remove the empty callback when figured out the optional type
+          // in TS
+          Display.moveUnitAlongPath(characters[i], characters[i].nextMovePath, function(u) {
+            // reset isMoving so we can select the unit again
+            u.isMoving = false;
+            u.nextMovePath = [];
+          });
+        }
+      }
     }
   }
 

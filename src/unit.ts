@@ -8,6 +8,7 @@ module Timeline {
     isAlly: number;
     moveDistance: number;
     isMoving: boolean;
+    nextMovePath: {x: number; y:number;}[];
 
     HEALTH: number;
     DAMAGE: number;
@@ -22,6 +23,7 @@ module Timeline {
       this.x = 0;
       this.y = 0;
       this.isMoving = false;
+      this.nextMovePath = [];
     }
 
     setPosition(x: number, y: number) {
@@ -34,6 +36,7 @@ module Timeline {
     }
 
     clone(){
+      // Very hacky yet so beautiful
       var c = new UnitClasses[this.constructor.toString().match(/function (\w*)/)[1]](this.isAlly);
       c.x = this.x;
       c.y = this.y;
