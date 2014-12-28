@@ -104,7 +104,8 @@ module Timeline {
 
           if(!isNear(clickedCell, lastCellInPath)) {
             var tmp = findPath(this.moveArea, lastCellInPath, clickedCell);
-            this.selectedUnit.nextMovePath = this.selectedUnit.nextMovePath.concat(tmp.slice(0, this.selectedUnit.moveDistance - this.selectedUnit.nextMovePath.length));
+            // this.selectedUnit.nextMovePath = this.selectedUnit.nextMovePath.concat(tmp.slice(0, this.selectedUnit.moveDistance - this.selectedUnit.nextMovePath.length));
+            this.selectedUnit.nextMovePath = this.selectedUnit.nextMovePath.concat(tmp);
           } else {
             this.selectedUnit.nextMovePath.push(clickedCell);
           }
@@ -134,7 +135,7 @@ module Timeline {
       var characters = GameState.currentBoard.allCharacters;
       var max = characters.length;
       for (var i = 0; i < max; i++){
-        if(characters[i].nextMovePath.length > 1) {
+        if(characters[i].nextMovePath.length > 1 && !characters[i].isMoving) {
           characters[i].isMoving = true;
           // Remove the empty callback when figured out the optional type
           // in TS
