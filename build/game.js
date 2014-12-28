@@ -194,11 +194,12 @@ var Timeline;
                     var lastCellInPath = this.selectedUnit.nextMovePath.length > 0 ? this.selectedUnit.nextMovePath[this.selectedUnit.nextMovePath.length - 1] : this.selectedUnit;
                     if (!isNear(clickedCell, lastCellInPath)) {
                         var tmp = findPath(this.moveArea, lastCellInPath, clickedCell);
-                        // this.selectedUnit.nextMovePath = this.selectedUnit.nextMovePath.concat(tmp.slice(0, this.selectedUnit.moveDistance - this.selectedUnit.nextMovePath.length));
-                        this.selectedUnit.nextMovePath = this.selectedUnit.nextMovePath.concat(tmp);
+                        this.selectedUnit.nextMovePath = this.selectedUnit.nextMovePath.concat(tmp.slice(0, this.selectedUnit.moveDistance - this.selectedUnit.nextMovePath.length));
                     }
                     else {
-                        this.selectedUnit.nextMovePath.push(clickedCell);
+                        if (this.selectedUnit.nextMovePath.length < this.selectedUnit.moveDistance) {
+                            this.selectedUnit.nextMovePath.push(clickedCell);
+                        }
                     }
                     Timeline.Display.drawMovePath(this.selectedUnit);
                 }
@@ -221,7 +222,7 @@ var Timeline;
             var characters = Timeline.GameState.currentBoard.allCharacters;
             var max = characters.length;
             for (var i = 0; i < max; i++) {
-                if (characters[i].nextMovePath.length > 1 && !characters[i].isMoving) {
+                if (!characters[i].isMoving && characters[i].nextMovePath.length > 1) {
                     characters[i].isMoving = true;
                     // Remove the empty callback when figured out the optional type
                     // in TS
