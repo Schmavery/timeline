@@ -31,6 +31,7 @@ module Timeline {
 
     create() {
       console.log("Creating Play");
+      this.game.canvas.oncontextmenu = function (e) { e.preventDefault(); }
 
       var sprite = this.game.add.sprite(340*SCALE, 50*SCALE, "menu-btn");
       sprite.inputEnabled = true;
@@ -71,33 +72,21 @@ module Timeline {
       focusOn(newBoard);
     }
 
-    onMouseDown(p) {
+    onMouseDown(mouse) {
       var characters = GameState.currentBoard.allCharacters;
-      var X = ~~(p.x / (SCALE * TILE_SIZE));
-      var Y = ~~(p.y / (SCALE * TILE_SIZE));
-      var shouldStopHere = false;
+      var clickedCell = {
+        x: ~~(mouse.x / (SCALE * TILE_SIZE)),
+        y: ~~(mouse.y / (SCALE * TILE_SIZE))
+      };
 
-      for (var i = 0; i < characters.length; i++){
-        if(characters[i].x === X && characters[i].y === Y && !characters[i].isMoving) {
-          this.moveArea = getMoveArea(characters[i], characters[i].moveDistance);
-          this.selectedUnit = characters[i]
-
-          Display.drawMoveArea(this.moveArea);
-          Display.drawMovePath(this.selectedUnit);
-          console.log(characters[i]);
-          shouldStopHere = true;
-        }
-      }
-      if(shouldStopHere) return;
-      for (var i = 0; i < this.moveArea.length; i++) {
-        var clickedCell = this.moveArea[i];
-        if(clickedCell.x === X && clickedCell.y === Y) {
-          if(contains(this.selectedUnit.nextMovePath, clickedCell, comparePoints)) {
-            removeFrom(this.selectedUnit.nextMovePath, clickedCell, comparePoints);
-            Display.drawMovePath(this.selectedUnit);
-            break;
-          }
-
+      var maybeCharacter = find(characters, clickedCell, comparePoints);
+      if(maybeCharacter) {
+        this.selectedUnit = maybeCharacter;
+        console.log(maybeCharacter);
+      } else if(this.selectedUnit) {
+        if(contains(this.selectedUnit.nextMovePath, clickedCell, comparePoints)) {
+          removeFrom(this.selectedUnit.nextMovePath, clickedCell, comparePoints);
+        } else if(contains(this.moveArea, clickedCell, comparePoints)) {
           var lastCellInPath = this.selectedUnit.nextMovePath.length > 0 ?
                                this.selectedUnit.nextMovePath[this.selectedUnit.nextMovePath.length - 1] :
                                this.selectedUnit;
@@ -105,16 +94,18 @@ module Timeline {
           if(!isNear(clickedCell, lastCellInPath)) {
             var tmp = findPath(this.moveArea, lastCellInPath, clickedCell);
             this.selectedUnit.nextMovePath = this.selectedUnit.nextMovePath.concat(tmp.slice(0, this.selectedUnit.moveDistance - this.selectedUnit.nextMovePath.length));
-            // this.selectedUnit.nextMovePath = this.selectedUnit.nextMovePath.concat(tmp);
           } else {
             if(this.selectedUnit.nextMovePath.length < this.selectedUnit.moveDistance) {
               this.selectedUnit.nextMovePath.push(clickedCell);
             }
           }
-
-          Display.drawMovePath(this.selectedUnit);
         }
       }
+      if(this.selectedUnit) {
+        this.moveArea = getMoveArea(this.selectedUnit.nextMovePath.length > 0 ? this.selectedUnit.nextMovePath[this.selectedUnit.nextMovePath.length - 1] : this.selectedUnit, this.selectedUnit.moveDistance - this.selectedUnit.nextMovePath.length);
+      }
+      Display.drawMoveArea(this.moveArea);
+      Display.drawMovePath(this.selectedUnit);
     }
 
     onMouseUp(p) {
@@ -275,12 +266,23 @@ module Timeline {
     return false;
   }
 
+  function find(coll, el, f) {
+    var max = coll.length;
+    for (var i = 0; i < max; ++i){
+      if(f(coll[i], el)) {
+        return coll[i];
+      }
+    }
+
+    return null;
+  }
+
   function focusOn(board: Board) {
     GameState.currentBoard = board;
     Display.drawBoard(board);
   }
 
-  function getMoveArea(center: Unit, max: number): {x: number; y: number;}[] {
+  function getMoveArea(center: {x: number; y: number;}, max: number): {x: number; y: number;}[] {
     var moveArea = [];
     for(var i = 1; i <= max; i++) {
       moveArea.push({x: center.x, y: center.y + i});

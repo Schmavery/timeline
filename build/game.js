@@ -137,6 +137,9 @@ var Timeline;
         };
         Play.prototype.create = function () {
             console.log("Creating Play");
+            this.game.canvas.oncontextmenu = function (e) {
+                e.preventDefault();
+            };
             var sprite = this.game.add.sprite(340 * Timeline.SCALE, 50 * Timeline.SCALE, "menu-btn");
             sprite.inputEnabled = true;
             sprite.events.onInputDown.add(this.playTurn.bind(this), this);
@@ -166,31 +169,22 @@ var Timeline;
             Timeline.Display.loadSpritesFromObjects(newBoard.allCharacters);
             focusOn(newBoard);
         };
-        Play.prototype.onMouseDown = function (p) {
+        Play.prototype.onMouseDown = function (mouse) {
             var characters = Timeline.GameState.currentBoard.allCharacters;
-            var X = ~~(p.x / (Timeline.SCALE * Timeline.TILE_SIZE));
-            var Y = ~~(p.y / (Timeline.SCALE * Timeline.TILE_SIZE));
-            var shouldStopHere = false;
-            for (var i = 0; i < characters.length; i++) {
-                if (characters[i].x === X && characters[i].y === Y && !characters[i].isMoving) {
-                    this.moveArea = getMoveArea(characters[i], characters[i].moveDistance);
-                    this.selectedUnit = characters[i];
-                    Timeline.Display.drawMoveArea(this.moveArea);
-                    Timeline.Display.drawMovePath(this.selectedUnit);
-                    console.log(characters[i]);
-                    shouldStopHere = true;
-                }
+            var clickedCell = {
+                x: ~~(mouse.x / (Timeline.SCALE * Timeline.TILE_SIZE)),
+                y: ~~(mouse.y / (Timeline.SCALE * Timeline.TILE_SIZE))
+            };
+            var maybeCharacter = find(characters, clickedCell, comparePoints);
+            if (maybeCharacter) {
+                this.selectedUnit = maybeCharacter;
+                console.log(maybeCharacter);
             }
-            if (shouldStopHere)
-                return;
-            for (var i = 0; i < this.moveArea.length; i++) {
-                var clickedCell = this.moveArea[i];
-                if (clickedCell.x === X && clickedCell.y === Y) {
-                    if (contains(this.selectedUnit.nextMovePath, clickedCell, comparePoints)) {
-                        removeFrom(this.selectedUnit.nextMovePath, clickedCell, comparePoints);
-                        Timeline.Display.drawMovePath(this.selectedUnit);
-                        break;
-                    }
+            else if (this.selectedUnit) {
+                if (contains(this.selectedUnit.nextMovePath, clickedCell, comparePoints)) {
+                    removeFrom(this.selectedUnit.nextMovePath, clickedCell, comparePoints);
+                }
+                else if (contains(this.moveArea, clickedCell, comparePoints)) {
                     var lastCellInPath = this.selectedUnit.nextMovePath.length > 0 ? this.selectedUnit.nextMovePath[this.selectedUnit.nextMovePath.length - 1] : this.selectedUnit;
                     if (!isNear(clickedCell, lastCellInPath)) {
                         var tmp = findPath(this.moveArea, lastCellInPath, clickedCell);
@@ -201,9 +195,13 @@ var Timeline;
                             this.selectedUnit.nextMovePath.push(clickedCell);
                         }
                     }
-                    Timeline.Display.drawMovePath(this.selectedUnit);
                 }
             }
+            if (this.selectedUnit) {
+                this.moveArea = getMoveArea(this.selectedUnit.nextMovePath.length > 0 ? this.selectedUnit.nextMovePath[this.selectedUnit.nextMovePath.length - 1] : this.selectedUnit, this.selectedUnit.moveDistance - this.selectedUnit.nextMovePath.length);
+            }
+            Timeline.Display.drawMoveArea(this.moveArea);
+            Timeline.Display.drawMovePath(this.selectedUnit);
         };
         Play.prototype.onMouseUp = function (p) {
             // console.log(p.x, p.y);
@@ -339,6 +337,15 @@ var Timeline;
             }
         }
         return false;
+    }
+    function find(coll, el, f) {
+        var max = coll.length;
+        for (var i = 0; i < max; ++i) {
+            if (f(coll[i], el)) {
+                return coll[i];
+            }
+        }
+        return null;
     }
     function focusOn(board) {
         Timeline.GameState.currentBoard = board;
