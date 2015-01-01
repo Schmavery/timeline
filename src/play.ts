@@ -97,7 +97,7 @@ module Timeline {
       // if not, we'll check if the user clicked on a movePath cell or a
       // moveArea cell to either add to the path, or remove from the path
       var maybeCharacter = find(characters, clickedCell, comparePoints);
-      if(maybeCharacter && maybeCharacter.teamNumber === GameState.myTeamNumber) {
+      if(maybeCharacter && isAlly(maybeCharacter) && !maybeCharacter.isMoving) {
         this.selectedUnit = maybeCharacter;
         console.log(maybeCharacter);
       } else if(this.selectedUnit) {
@@ -191,21 +191,20 @@ module Timeline {
       remove(openSet, cur, comparePoints);
       closedSet.push(cur);
 
-      var allNeighbours = findNeighbours(cur);
+      var allNeighbours = findNeighbours(space, cur);
       for (var n in allNeighbours){
         var neighbour = allNeighbours[n];
         if(contains(closedSet, neighbour, comparePoints)) continue;
 
         var tentativeGScore = gScore[hashPoint(cur)] + heuristicEstimate(cur, neighbour);
         var neighbourHash = hashPoint(neighbour);
-        var neighbourIsNotInOpenSet = !contains(openSet, neighbour, comparePoints);
-        if(neighbourIsNotInOpenSet || tentativeGScore < gScore[neighbourHash]) {
+        if(!contains(openSet, neighbour, comparePoints) || tentativeGScore < gScore[neighbourHash]) {
 
           cameFrom[neighbourHash] = cur;
 
           gScore[neighbourHash] = tentativeGScore;
           fScore[neighbourHash] = gScore[neighbourHash] + heuristicEstimate(neighbour, end);
-          if(neighbourIsNotInOpenSet) {
+          if(!contains(openSet, neighbour, comparePoints)) {
             openSet.push(neighbour);
           }
         }
@@ -217,13 +216,13 @@ module Timeline {
     return [];
   }
 
-  function findNeighbours(p: Point) {
+  function findNeighbours(space: Point[], p: Point) {
     return [
       {x: p.x + 1, y: p.y},
       {x: p.x - 1, y: p.y},
       {x: p.x, y: p.y + 1},
       {x: p.x, y: p.y - 1},
-    ];
+    ].filter((x) => {return contains(space, x, comparePoints)});
   }
 
   function constructPath(cameFrom, end: Point) {
@@ -312,17 +311,18 @@ module Timeline {
       }
     }
     var tmp = [];
-    var s = Date.now();
     for(var i=0; i<moveArea.length; i++) {
       if(findPath(moveArea, center, moveArea[i]).length > 0) tmp.push(moveArea[i]);
     }
-    console.log(Date.now() - s);
     return tmp;
   }
 
   function checkAddTile(moveArea, tile: Point) {
     var prop1 = GameState.propertyMap[hashPoint(tile)];
-    if(prop1 && prop1.collision === "true" && isVisible(tile)) return;
+    if(prop1 && prop1.collision === "true") return;
+
+    var c = getUnitAt(tile);
+    if(c && !isAlly(c) && isVisible(c)) return;
 
     moveArea.push(tile);
   }
@@ -331,7 +331,7 @@ module Timeline {
     var characters = GameState.currentBoard.allCharacters;
     for(var i = 0; i < characters.length; i++) {
       var c = characters[i];
-      if(c.teamNumber !== GameState.myTeamNumber) continue;
+      if(!isAlly(c)) continue;
       if(isNear(c, point, c.visionRange)) return true;
     }
 

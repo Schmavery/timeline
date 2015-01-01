@@ -93,12 +93,8 @@ module Timeline {
           if(!isVisible({x: i, y: j})) {
             fogOfWar.drawRect(i * TILE_SIZE * SCALE, j * TILE_SIZE * SCALE, TILE_SIZE * SCALE, TILE_SIZE * SCALE);
           } else {
-            for(var k = 0; k < characters.length; k++) {
-              if(characters[k].x === i && characters[k].y === j)  {
-                var sprite = getFromMap(spriteMap, characters[k]);
-                sprite.exists = true;
-              }
-            }
+            var sprite = getFromMap(spriteMap, getUnitAt(new Point(i, j)));
+            if(sprite) sprite.exists = true;
           }
         }
       }
@@ -147,6 +143,13 @@ module Timeline {
       moveArea.clear();
       getFromMap(movePathMap, unit).clear();
 
+      for(var i = 0; i < path.length; i++) {
+        var c = getUnitAt(path[i]);
+        if(c && !isAlly(c)) {
+          path = path.slice(0, i - c.RANGE < 0 ? 0 : i - c.RANGE);
+          break;
+        }
+      }
       var loop = function(arr, j) {
         if(j >= arr.length) {
           // var sprite = getFromMap(spriteMap, unit);

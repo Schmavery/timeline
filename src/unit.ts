@@ -10,6 +10,7 @@ module Timeline {
     isMoving: boolean;
     nextMovePath: Point[];
     visionRange: number;
+    range: number;
 
     HEALTH: number;
     DAMAGE: number;
@@ -25,7 +26,7 @@ module Timeline {
       this.y = 0;
       this.isMoving = false;
       this.nextMovePath = [];
-      this.visionRange = 2;
+      this.visionRange = 4;
     }
 
     setPosition(x: number, y: number) {
@@ -46,6 +47,7 @@ module Timeline {
       c.usedAP = this.usedAP;
       return c;
     }
+
     getType() {
       return this.constructor.toString().match(/function (\w*)/)[1];
     }

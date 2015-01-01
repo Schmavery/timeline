@@ -17,7 +17,7 @@ var Timeline;
             this.y = 0;
             this.isMoving = false;
             this.nextMovePath = [];
-            this.visionRange = 2;
+            this.visionRange = 4;
         }
         Unit.prototype.setPosition = function (x, y) {
             this.x = x;
@@ -89,6 +89,14 @@ var Timeline;
 /// <reference path="references.ts" />
 var Timeline;
 (function (Timeline) {
+    var Point = (function () {
+        function Point(x, y) {
+            this.x = x;
+            this.y = y;
+        }
+        return Point;
+    })();
+    Timeline.Point = Point;
     var GameState;
     (function (GameState) {
         GameState.boards = [];
@@ -108,6 +116,19 @@ var Timeline;
         return Board;
     })();
     Timeline.Board = Board;
+    function getUnitAt(p) {
+        var characters = GameState.currentBoard.allCharacters;
+        for (var i = 0; i < characters.length; i++) {
+            if (characters[i].x === p.x && characters[i].y === p.y)
+                return characters[i];
+        }
+        return null;
+    }
+    Timeline.getUnitAt = getUnitAt;
+    function isAlly(u) {
+        return u.teamNumber === GameState.myTeamNumber;
+    }
+    Timeline.isAlly = isAlly;
 })(Timeline || (Timeline = {}));
 /// <reference path="references.ts" />
 var Timeline;
@@ -189,7 +210,7 @@ var Timeline;
             // if not, we'll check if the user clicked on a movePath cell or a
             // moveArea cell to either add to the path, or remove from the path
             var maybeCharacter = find(characters, clickedCell, comparePoints);
-            if (maybeCharacter && maybeCharacter.teamNumber === Timeline.GameState.myTeamNumber) {
+            if (maybeCharacter && Timeline.isAlly(maybeCharacter) && !maybeCharacter.isMoving) {
                 this.selectedUnit = maybeCharacter;
                 console.log(maybeCharacter);
             }
@@ -276,19 +297,18 @@ var Timeline;
             }
             remove(openSet, cur, comparePoints);
             closedSet.push(cur);
-            var allNeighbours = findNeighbours(cur);
+            var allNeighbours = findNeighbours(space, cur);
             for (var n in allNeighbours) {
                 var neighbour = allNeighbours[n];
                 if (contains(closedSet, neighbour, comparePoints))
                     continue;
                 var tentativeGScore = gScore[hashPoint(cur)] + heuristicEstimate(cur, neighbour);
                 var neighbourHash = hashPoint(neighbour);
-                var neighbourIsNotInOpenSet = !contains(openSet, neighbour, comparePoints);
-                if (neighbourIsNotInOpenSet || tentativeGScore < gScore[neighbourHash]) {
+                if (!contains(openSet, neighbour, comparePoints) || tentativeGScore < gScore[neighbourHash]) {
                     cameFrom[neighbourHash] = cur;
                     gScore[neighbourHash] = tentativeGScore;
                     fScore[neighbourHash] = gScore[neighbourHash] + heuristicEstimate(neighbour, end);
-                    if (neighbourIsNotInOpenSet) {
+                    if (!contains(openSet, neighbour, comparePoints)) {
                         openSet.push(neighbour);
                     }
                 }
@@ -298,13 +318,15 @@ var Timeline;
         console.log("findPath: End is unreachable");
         return [];
     }
-    function findNeighbours(p) {
+    function findNeighbours(space, p) {
         return [
             { x: p.x + 1, y: p.y },
             { x: p.x - 1, y: p.y },
             { x: p.x, y: p.y + 1 },
             { x: p.x, y: p.y - 1 },
-        ];
+        ].filter(function (x) {
+            return contains(space, x, comparePoints);
+        });
     }
     function constructPath(cameFrom, end) {
         var cur = end;
@@ -381,17 +403,18 @@ var Timeline;
             }
         }
         var tmp = [];
-        var s = Date.now();
         for (var i = 0; i < moveArea.length; i++) {
             if (findPath(moveArea, center, moveArea[i]).length > 0)
                 tmp.push(moveArea[i]);
         }
-        console.log(Date.now() - s);
         return tmp;
     }
     function checkAddTile(moveArea, tile) {
         var prop1 = Timeline.GameState.propertyMap[hashPoint(tile)];
-        if (prop1 && prop1.collision === "true" && isVisible(tile))
+        if (prop1 && prop1.collision === "true")
+            return;
+        var c = Timeline.getUnitAt(tile);
+        if (c && !Timeline.isAlly(c) && isVisible(c))
             return;
         moveArea.push(tile);
     }
@@ -399,7 +422,7 @@ var Timeline;
         var characters = Timeline.GameState.currentBoard.allCharacters;
         for (var i = 0; i < characters.length; i++) {
             var c = characters[i];
-            if (c.teamNumber !== Timeline.GameState.myTeamNumber)
+            if (!Timeline.isAlly(c))
                 continue;
             if (isNear(c, point, c.visionRange))
                 return true;
@@ -569,12 +592,9 @@ var Timeline;
                         fogOfWar.drawRect(i * Timeline.TILE_SIZE * Timeline.SCALE, j * Timeline.TILE_SIZE * Timeline.SCALE, Timeline.TILE_SIZE * Timeline.SCALE, Timeline.TILE_SIZE * Timeline.SCALE);
                     }
                     else {
-                        for (var k = 0; k < characters.length; k++) {
-                            if (characters[k].x === i && characters[k].y === j) {
-                                var sprite = getFromMap(spriteMap, characters[k]);
-                                sprite.exists = true;
-                            }
-                        }
+                        var sprite = getFromMap(spriteMap, Timeline.getUnitAt(new Timeline.Point(i, j)));
+                        if (sprite)
+                            sprite.exists = true;
                     }
                 }
             }
@@ -614,6 +634,13 @@ var Timeline;
         function moveUnitAlongPath(unit, path, callback) {
             moveArea.clear();
             getFromMap(movePathMap, unit).clear();
+            for (var i = 0; i < path.length; i++) {
+                var c = Timeline.getUnitAt(path[i]);
+                if (c && !Timeline.isAlly(c)) {
+                    path = path.slice(0, i - c.RANGE < 0 ? 0 : i - c.RANGE);
+                    break;
+                }
+            }
             var loop = function (arr, j) {
                 if (j >= arr.length) {
                     // var sprite = getFromMap(spriteMap, unit);
