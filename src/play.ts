@@ -47,7 +47,14 @@ module Timeline {
       for (var i = 0; i < map.width; i++){
         for (var j = 0; j < map.height; j++){
           var tile = map.getTile(i, j, "Tile Layer 1");
-          if (Object.keys(tile.properties).length !== 0){
+          var props = tile.properties;
+          if (Object.keys(props).length !== 0){
+            for (var key in props){
+              if (typeof props[key] !== "string") continue;
+              if (props[key].toLowerCase() === "true") props[key] = true;
+              else if (props[key].toLowerCase() === "false") props[key] = false;
+              else if (!isNaN(props[key])) props[key] = parseInt(props[key]);
+            }
             GameState.propertyMap[hashPoint({x:i, y:j})] = tile.properties;
           }
         }
@@ -314,7 +321,7 @@ module Timeline {
 
   function checkAddTile(moveArea, tile: Point) {
     var prop1 = GameState.propertyMap[hashPoint(tile)];
-    if(prop1 && prop1.collision === "true") return;
+    if(prop1 && prop1.collision) return;
 
     moveArea.push(tile);
   }
