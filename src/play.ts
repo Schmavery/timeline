@@ -3,7 +3,7 @@ module Timeline {
   export class Play extends Phaser.State {
     layer: Phaser.TilemapLayer;
     prevTime: number;
-    moveArea: {x: number; y: number;}[];
+    moveArea: Point[];
     selectedUnit: Unit;
     keyboard: Phaser.Keyboard;
 
@@ -90,6 +90,10 @@ module Timeline {
         y: ~~(mouse.y / (SCALE * TILE_SIZE))
       };
 
+      // maybeCharacter will be equal to the selected character if
+      // clickedCell is a cell that contains a character
+      // if not, we'll check if the user clicked on a movePath cell or a
+      // moveArea cell to either add to the path, or remove from the path
       var maybeCharacter = find(characters, clickedCell, comparePoints);
       if(maybeCharacter) {
         this.selectedUnit = maybeCharacter;
@@ -139,7 +143,7 @@ module Timeline {
       var characters = GameState.currentBoard.allCharacters;
       var max = characters.length;
       for (var i = 0; i < max; i++){
-        if(!characters[i].isMoving && characters[i].nextMovePath.length > 1) {
+        if(!characters[i].isMoving && characters[i].nextMovePath.length > 0) {
           characters[i].isMoving = true;
           // Remove the empty callback when figured out the optional type
           // in TS
@@ -155,7 +159,7 @@ module Timeline {
 
 
   // Returns a path from the start to the end within the given space
-  function findPath(space, start, end): {x: number; y: number;}[] {
+  function findPath(space, start, end): Point[] {
     var openSet = [start];
     var closedSet = [];
     var cameFrom = {};
@@ -216,7 +220,7 @@ module Timeline {
     return ret;
   }
 
-  function constructPath(cameFrom, end: {x: number; y: number;}) {
+  function constructPath(cameFrom, end: Point) {
     var cur = end;
     var path = [cur];
     while(cameFrom[hashPoint(cur)] !== undefined) {
@@ -233,15 +237,15 @@ module Timeline {
     return Math.sqrt((p2.x - p1.x) * (p2.x - p1.x) + (p2.y - p1.y)*(p2.y - p1.y));
   }
 
-  function isNear(p1, p2) {
-    return (p1.x === p2.x + 1 && p1.y === p2.y) ||
-           (p1.x === p2.x - 1 && p1.y === p2.y) ||
-           (p1.y === p2.y + 1 && p1.x === p2.x) ||
-           (p1.y === p2.y - 1 && p1.x === p2.x);
+  function isNear(p1, p2, radius?) {
+    radius = radius || 1;
+    var dx = Math.abs(p2.x - p1.x);
+    var dy = Math.abs(p2.y - p1.y);
+    return dx + dy <= radius;
   }
 
   function hashPoint(p) {
-    return "" + p.x + p.y + ":" + p.y + p.x;
+    return "" + p.x + "." + p.y;
   }
 
   function comparePoints(p1, p2) {
@@ -267,14 +271,7 @@ module Timeline {
   }
 
   function contains(coll, el, f) {
-    var max = coll.length;
-    for (var i = 0; i < max; ++i){
-      if(f(coll[i], el)) {
-        return true;
-      }
-    }
-
-    return false;
+    return find(coll, el, f) !== null;
   }
 
   function find(coll, el, f) {
@@ -293,25 +290,41 @@ module Timeline {
     Display.drawBoard(board);
   }
 
-  function getMoveArea(center: {x: number; y: number;}, max: number): {x: number; y: number;}[] {
+  function getMoveArea(center: Point, max: number): Point[] {
     var moveArea = [];
     for(var i = 1; i <= max; i++) {
-      moveArea.push({x: center.x, y: center.y + i});
-      moveArea.push({x: center.x, y: center.y - i});
-      moveArea.push({x: center.x + i, y: center.y});
-      moveArea.push({x: center.x - i, y: center.y});
+      checkAddTile(moveArea, {x: center.x, y: center.y + i});
+      checkAddTile(moveArea, {x: center.x, y: center.y - i});
+      checkAddTile(moveArea, {x: center.x + i, y: center.y});
+      checkAddTile(moveArea, {x: center.x - i, y: center.y});
 
       for (var j = 1; j <= max - i; j++){
-        moveArea.push({x: center.x + i, y: center.y + j});
-        moveArea.push({x: center.x + i, y: center.y - j});
-        moveArea.push({x: center.x - i, y: center.y + j});
-        moveArea.push({x: center.x - i, y: center.y - j});
+        checkAddTile(moveArea, {x: center.x + i, y: center.y + j});
+        checkAddTile(moveArea, {x: center.x + i, y: center.y - j});
+        checkAddTile(moveArea, {x: center.x - i, y: center.y + j});
+        checkAddTile(moveArea, {x: center.x - i, y: center.y - j});
       }
     }
-    return moveArea;
+    var tmp = [];
+    for(var i=0; i<moveArea.length; i++) {
+      if(findPath(moveArea, center, moveArea[i]).length > 0) tmp.push(moveArea[i]);
+    }
+    return tmp;
+  }
+
+  function checkAddTile(moveArea, tile: Point) {
+    var prop1 = GameState.propertyMap[hashPoint(tile)];
+    if(prop1 && prop1.collision === "true") return;
+
+    moveArea.push(tile);
+  }
+
+  function checkFogOfWar(point: Point) {
+    // body...
   }
 
   function mouseWheelCallback(event) {
+    event.preventDefault();
     var curTime = Date.now();
     if(curTime - this.prevTime < 600) {
       return;
@@ -329,7 +342,7 @@ module Timeline {
     var arr = map.objects[layerName];
     var ret = [];
     for (var i = 0; i < arr.length; i++) {
-      var character = new UnitClasses[arr[i].properties.type]();
+      var character = new UnitClasses[arr[i].properties.type](arr[i].properties.teamNumber);
       character.setPosition(~~(arr[i].x / TILE_SIZE), ~~(arr[i].y/TILE_SIZE) - 1);
       ret.push(character);
     }

@@ -2,6 +2,12 @@
 
 module Timeline {
   export module Display {
+    var unitsToFrameNumber = {
+      "Warrior": 0,
+      "Archer": 32,
+      "Mage": 0
+    }
+
     var movePathMap: {key: Unit; val: Phaser.Graphics}[] = [];
     var spriteMap: {key: Unit; val: Phaser.Sprite}[] = [];
     var game = null;
@@ -21,7 +27,8 @@ module Timeline {
 
     export function loadSpritesFromObjects(arr: Unit[]) {
       arr.map((u) => {
-        var sprite = game.add.sprite(SCALE * TILE_SIZE * u.x, SCALE * TILE_SIZE * u.y, "characters");
+        console.log(typeof u);
+        var sprite = game.add.sprite(SCALE * TILE_SIZE * u.x, SCALE * TILE_SIZE * u.y, "characters", 0);
         sprite.scale.set(SCALE);
         sprite.animations.add('moveLeft', [20, 21, 22, 23], 10, true);
         sprite.animations.add('doneMovingLeft', [20], 10, true);
@@ -49,12 +56,25 @@ module Timeline {
       for (var i = 0; i < spriteMap.length; i++) {
         spriteMap[i].val.exists = false;
       }
+      for (var i = 0; i < movePathMap.length; i++) {
+        movePathMap[i].val.clear();
+      }
+      // for (var i = 0; i < GameState.boards.length; i++) {
+      //   for (var j = 0; j < GameState.boards[i].allCharacters.length; j++) {
+      //     var c = GameState.boards[i].allCharacters[j];
+
+      //   }
+      //   spriteMap[i].val.exists = false;
+      // }
 
       // Enable the ones from the board
       for (var i = 0; i < board.allCharacters.length; i++) {
         var c = board.allCharacters[i];
         var sprite = getFromMap(spriteMap, c);
         sprite.exists = true;
+        if(c.nextMovePath.length > 0) {
+          Display.drawMovePath(c);
+        }
       }
     }
 
@@ -67,7 +87,7 @@ module Timeline {
     //   // moveArea.drawRect(unit.x * TILE_SIZE * SCALE, unit.y * TILE_SIZE * SCALE, TILE_SIZE * SCALE, TILE_SIZE * SCALE);
     // }
 
-    export function drawMoveArea(area: {x: number; y: number;}[]) {
+    export function drawMoveArea(area: Point[]) {
       moveArea.clear();
 
       game.world.bringToTop(moveArea);
@@ -87,7 +107,7 @@ module Timeline {
       __drawMovePath(unit.nextMovePath, getFromMap(movePathMap, unit));
     }
 
-    function __drawMovePath(path: {x: number; y: number;}[], movePath: Phaser.Graphics) {
+    function __drawMovePath(path: Point[], movePath: Phaser.Graphics) {
       movePath.clear();
 
       game.world.bringToTop(movePath);
@@ -104,7 +124,7 @@ module Timeline {
       movePath.endFill();
     }
 
-    export function moveUnitAlongPath(unit: Unit, path: {x: number; y: number;}[], callback) {
+    export function moveUnitAlongPath(unit: Unit, path: Point[], callback) {
       moveArea.clear();
       getFromMap(movePathMap, unit).clear();
 
@@ -123,7 +143,7 @@ module Timeline {
       loop(path, 0);
     }
 
-    export function moveUnit(unit: Unit, dest: {x: number; y: number;}, callback) {
+    export function moveUnit(unit: Unit, dest: Point, callback) {
       // Change the coordinates of the units
       var X = unit.x * TILE_SIZE * SCALE;
       var Y = unit.y * TILE_SIZE * SCALE;

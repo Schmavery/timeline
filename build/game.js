@@ -8,10 +8,10 @@ var __extends = this.__extends || function (d, b) {
 var Timeline;
 (function (Timeline) {
     var Unit = (function () {
-        function Unit(isAlly) {
+        function Unit(teamNumber) {
             this.health = this.HEALTH;
             this.usedAP = 0;
-            this.isAlly = isAlly;
+            this.teamNumber = teamNumber;
             this.moveDistance = 0;
             this.x = 0;
             this.y = 0;
@@ -27,20 +27,23 @@ var Timeline;
         };
         Unit.prototype.clone = function () {
             // Very hacky yet so beautiful
-            var c = new Timeline.UnitClasses[this.constructor.toString().match(/function (\w*)/)[1]](this.isAlly);
+            var c = new Timeline.UnitClasses[this.getType()](this.teamNumber);
             c.x = this.x;
             c.y = this.y;
             c.health = this.health;
             c.usedAP = this.usedAP;
             return c;
         };
+        Unit.prototype.getType = function () {
+            return this.constructor.toString().match(/function (\w*)/)[1];
+        };
         return Unit;
     })();
     Timeline.Unit = Unit;
     var Warrior = (function (_super) {
         __extends(Warrior, _super);
-        function Warrior(isAlly) {
-            _super.call(this, isAlly);
+        function Warrior(teamNumber) {
+            _super.call(this, teamNumber);
             this.HEALTH = 3;
             this.DAMAGE = 2;
             this.AP = 3;
@@ -52,8 +55,8 @@ var Timeline;
     Timeline.Warrior = Warrior;
     var Mage = (function (_super) {
         __extends(Mage, _super);
-        function Mage(isAlly) {
-            _super.call(this, isAlly);
+        function Mage(teamNumber) {
+            _super.call(this, teamNumber);
             this.HEALTH = 1;
             this.DAMAGE = 3;
             this.AP = 1;
@@ -65,8 +68,8 @@ var Timeline;
     Timeline.Mage = Mage;
     var Archer = (function (_super) {
         __extends(Archer, _super);
-        function Archer(isAlly) {
-            _super.call(this, isAlly);
+        function Archer(teamNumber) {
+            _super.call(this, teamNumber);
             this.HEALTH = 2;
             this.DAMAGE = 1;
             this.AP = 2;
@@ -85,21 +88,12 @@ var Timeline;
 /// <reference path="references.ts" />
 var Timeline;
 (function (Timeline) {
-    // class _GameState {
-    //   boards: Board[];
-    //   currentBoard: Board;
-    //   constructor() {
-    //     this.boards = [];
-    //   }
-    // }
     var GameState;
     (function (GameState) {
         GameState.boards = [];
         GameState.currentBoard = null;
         GameState.propertyMap = {};
     })(GameState = Timeline.GameState || (Timeline.GameState = {}));
-    // SINGLETON PRIVATE FACTORY METHOD
-    // export var GameState = new _GameState();
     var Board = (function () {
         function Board(c) {
             this.allCharacters = c;
@@ -187,6 +181,10 @@ var Timeline;
                 x: ~~(mouse.x / (Timeline.SCALE * Timeline.TILE_SIZE)),
                 y: ~~(mouse.y / (Timeline.SCALE * Timeline.TILE_SIZE))
             };
+            // maybeCharacter will be equal to the selected character if
+            // clickedCell is a cell that contains a character
+            // if not, we'll check if the user clicked on a movePath cell or a
+            // moveArea cell to either add to the path, or remove from the path
             var maybeCharacter = find(characters, clickedCell, comparePoints);
             if (maybeCharacter) {
                 this.selectedUnit = maybeCharacter;
@@ -232,7 +230,7 @@ var Timeline;
             var characters = Timeline.GameState.currentBoard.allCharacters;
             var max = characters.length;
             for (var i = 0; i < max; i++) {
-                if (!characters[i].isMoving && characters[i].nextMovePath.length > 1) {
+                if (!characters[i].isMoving && characters[i].nextMovePath.length > 0) {
                     characters[i].isMoving = true;
                     // Remove the empty callback when figured out the optional type
                     // in TS
@@ -314,11 +312,14 @@ var Timeline;
     function heuristicEstimate(p1, p2) {
         return Math.sqrt((p2.x - p1.x) * (p2.x - p1.x) + (p2.y - p1.y) * (p2.y - p1.y));
     }
-    function isNear(p1, p2) {
-        return (p1.x === p2.x + 1 && p1.y === p2.y) || (p1.x === p2.x - 1 && p1.y === p2.y) || (p1.y === p2.y + 1 && p1.x === p2.x) || (p1.y === p2.y - 1 && p1.x === p2.x);
+    function isNear(p1, p2, radius) {
+        radius = radius || 1;
+        var dx = Math.abs(p2.x - p1.x);
+        var dy = Math.abs(p2.y - p1.y);
+        return dx + dy <= radius;
     }
     function hashPoint(p) {
-        return "" + p.x + p.y + ":" + p.y + p.x;
+        return "" + p.x + "." + p.y;
     }
     function comparePoints(p1, p2) {
         return p1.x === p2.x && p1.y === p2.y;
@@ -342,13 +343,7 @@ var Timeline;
         arr.splice(i, arr.length);
     }
     function contains(coll, el, f) {
-        var max = coll.length;
-        for (var i = 0; i < max; ++i) {
-            if (f(coll[i], el)) {
-                return true;
-            }
-        }
-        return false;
+        return find(coll, el, f) !== null;
     }
     function find(coll, el, f) {
         var max = coll.length;
@@ -366,20 +361,35 @@ var Timeline;
     function getMoveArea(center, max) {
         var moveArea = [];
         for (var i = 1; i <= max; i++) {
-            moveArea.push({ x: center.x, y: center.y + i });
-            moveArea.push({ x: center.x, y: center.y - i });
-            moveArea.push({ x: center.x + i, y: center.y });
-            moveArea.push({ x: center.x - i, y: center.y });
+            checkAddTile(moveArea, { x: center.x, y: center.y + i });
+            checkAddTile(moveArea, { x: center.x, y: center.y - i });
+            checkAddTile(moveArea, { x: center.x + i, y: center.y });
+            checkAddTile(moveArea, { x: center.x - i, y: center.y });
             for (var j = 1; j <= max - i; j++) {
-                moveArea.push({ x: center.x + i, y: center.y + j });
-                moveArea.push({ x: center.x + i, y: center.y - j });
-                moveArea.push({ x: center.x - i, y: center.y + j });
-                moveArea.push({ x: center.x - i, y: center.y - j });
+                checkAddTile(moveArea, { x: center.x + i, y: center.y + j });
+                checkAddTile(moveArea, { x: center.x + i, y: center.y - j });
+                checkAddTile(moveArea, { x: center.x - i, y: center.y + j });
+                checkAddTile(moveArea, { x: center.x - i, y: center.y - j });
             }
         }
-        return moveArea;
+        var tmp = [];
+        for (var i = 0; i < moveArea.length; i++) {
+            if (findPath(moveArea, center, moveArea[i]).length > 0)
+                tmp.push(moveArea[i]);
+        }
+        return tmp;
+    }
+    function checkAddTile(moveArea, tile) {
+        var prop1 = Timeline.GameState.propertyMap[hashPoint(tile)];
+        if (prop1 && prop1.collision === "true")
+            return;
+        moveArea.push(tile);
+    }
+    function checkFogOfWar(point) {
+        // body...
     }
     function mouseWheelCallback(event) {
+        event.preventDefault();
         var curTime = Date.now();
         if (curTime - this.prevTime < 600) {
             return;
@@ -394,7 +404,7 @@ var Timeline;
         var arr = map.objects[layerName];
         var ret = [];
         for (var i = 0; i < arr.length; i++) {
-            var character = new Timeline.UnitClasses[arr[i].properties.type]();
+            var character = new Timeline.UnitClasses[arr[i].properties.type](arr[i].properties.teamNumber);
             character.setPosition(~~(arr[i].x / Timeline.TILE_SIZE), ~~(arr[i].y / Timeline.TILE_SIZE) - 1);
             ret.push(character);
         }
@@ -464,6 +474,11 @@ var Timeline;
 (function (Timeline) {
     var Display;
     (function (Display) {
+        var unitsToFrameNumber = {
+            "Warrior": 0,
+            "Archer": 32,
+            "Mage": 0
+        };
         var movePathMap = [];
         var spriteMap = [];
         var game = null;
@@ -480,7 +495,8 @@ var Timeline;
         Display.cacheGame = cacheGame;
         function loadSpritesFromObjects(arr) {
             arr.map(function (u) {
-                var sprite = game.add.sprite(Timeline.SCALE * Timeline.TILE_SIZE * u.x, Timeline.SCALE * Timeline.TILE_SIZE * u.y, "characters");
+                console.log(typeof u);
+                var sprite = game.add.sprite(Timeline.SCALE * Timeline.TILE_SIZE * u.x, Timeline.SCALE * Timeline.TILE_SIZE * u.y, "characters", 0);
                 sprite.scale.set(Timeline.SCALE);
                 sprite.animations.add('moveLeft', [20, 21, 22, 23], 10, true);
                 sprite.animations.add('doneMovingLeft', [20], 10, true);
@@ -506,10 +522,16 @@ var Timeline;
             for (var i = 0; i < spriteMap.length; i++) {
                 spriteMap[i].val.exists = false;
             }
+            for (var i = 0; i < movePathMap.length; i++) {
+                movePathMap[i].val.clear();
+            }
             for (var i = 0; i < board.allCharacters.length; i++) {
                 var c = board.allCharacters[i];
                 var sprite = getFromMap(spriteMap, c);
                 sprite.exists = true;
+                if (c.nextMovePath.length > 0) {
+                    Display.drawMovePath(c);
+                }
             }
         }
         Display.drawBoard = drawBoard;
