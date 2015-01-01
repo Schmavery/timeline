@@ -144,18 +144,17 @@ module Timeline {
       }
     }
 
-    function __drawMovePath(path: Point[], movePath: Phaser.Graphics) {
-    }
-
-    export function moveUnitAlongPath(unit: Unit, path: Point[], callback) {
+    export function moveUnitAlongPath(unit: Unit, callback) {
       moveArea.clear();
       getFromMap(movePathMap, unit).clear();
+      var path = unit.nextMovePath;
 
       for(var i = 0; i < path.length; i++) {
         var c = getUnitAt(path[i]);
         if(c && !isAlly(c)) {
           path = path.slice(0, i - c.RANGE < 0 ? 0 : i - c.RANGE);
-          var lastCell = path.length > 0 ? path[path.length - 1] : unit;
+          unit.nextMovePath = path;
+          var lastCell = getLastMove(unit);
           unit.nextAttack = {damage: unit.DAMAGE, target: c, trigger: lastCell};
           break;
         }
@@ -177,6 +176,15 @@ module Timeline {
         });
       };
       loop(path, 0);
+    }
+
+    export function drawTargetableEnemies(nearbyEnemies: Point[]) {
+      moveArea.beginFill(0xff0000);
+      for(var i = 0; i < nearbyEnemies.length; i++) {
+         moveArea.drawRect(nearbyEnemies[i].x * TILE_SIZE * SCALE, nearbyEnemies[i].y * TILE_SIZE * SCALE, TILE_SIZE * SCALE, TILE_SIZE * SCALE);
+      }
+
+      moveArea.endFill();
     }
 
     export function moveUnit(unit: Unit, dest: Point, callback) {

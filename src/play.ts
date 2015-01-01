@@ -104,7 +104,6 @@ module Timeline {
       // if not, we'll check if the user clicked on a movePath cell or a
       // moveArea cell to either add to the path, or remove from the path
       var maybeCharacter = find(characters, clickedCell, comparePoints);
-      if(maybeCharacter) console.log(maybeCharacter.isMoving);
       if(maybeCharacter && isAlly(maybeCharacter) && !maybeCharacter.isMoving) {
         this.selectedUnit = maybeCharacter;
         console.log(maybeCharacter);
@@ -112,9 +111,7 @@ module Timeline {
         if(contains(this.selectedUnit.nextMovePath, clickedCell, comparePoints)) {
           removeFrom(this.selectedUnit.nextMovePath, clickedCell, comparePoints);
         } else if(contains(this.moveArea, clickedCell, comparePoints)) {
-          var lastCellInPath = this.selectedUnit.nextMovePath.length > 0 ?
-                               this.selectedUnit.nextMovePath[this.selectedUnit.nextMovePath.length - 1] :
-                               this.selectedUnit;
+          var lastCellInPath = getLastMove(this.selectedUnit);
 
           if(!isNear(clickedCell, lastCellInPath)) {
             var tmp = findPath(this.moveArea, lastCellInPath, clickedCell);
@@ -125,23 +122,29 @@ module Timeline {
             }
           }
         } else {
-          var lastCellInPath = this.selectedUnit.nextMovePath.length > 0 ?
-                               this.selectedUnit.nextMovePath[this.selectedUnit.nextMovePath.length - 1] :
-                               this.selectedUnit;
+          var lastCellInPath = getLastMove(this.selectedUnit);
+
           if(maybeCharacter && !isAlly(maybeCharacter) && isNear(maybeCharacter, lastCellInPath, this.selectedUnit.RANGE)) {
             this.selectedUnit.nextAttack = {damage:this.selectedUnit.DAMAGE, target: maybeCharacter, trigger: lastCellInPath};
             console.log("Will attack", this.selectedUnit.nextAttack);
           } else{
-            this.selectedUnit = null;
-            this.moveArea = [];
+            // Don't deselect a character if you clicked on an enemy
+            if(!maybeCharacter) {
+              this.selectedUnit = null;
+              this.moveArea = [];
+            }
           }
         }
       }
 
+      var targetableEnemies = [];
+      // If we selected a unit
       if(this.selectedUnit) {
         this.moveArea = getMoveArea(this.selectedUnit.nextMovePath.length > 0 ? this.selectedUnit.nextMovePath[this.selectedUnit.nextMovePath.length - 1] : this.selectedUnit, this.selectedUnit.moveDistance - this.selectedUnit.nextMovePath.length);
+        targetableEnemies = findNearbyEnemies(this.selectedUnit);
       }
       Display.drawMoveArea(this.moveArea);
+      Display.drawTargetableEnemies(targetableEnemies);
       Display.drawMovePath(this.selectedUnit);
     }
 
@@ -169,7 +172,7 @@ module Timeline {
           characters[i].isMoving = true;
           // Remove the empty callback when figured out the optional type
           // in TS
-          Display.moveUnitAlongPath(characters[i], characters[i].nextMovePath, function(u) {
+          Display.moveUnitAlongPath(characters[i], function(u) {
             // reset isMoving so we can select the unit again
             u.isMoving = false;
             u.nextMovePath = [];
@@ -179,6 +182,21 @@ module Timeline {
       this.selectedUnit = null;
       this.moveArea = [];
     }
+  }
+
+  export function getLastMove(unit: Unit) {
+    return unit.nextMovePath.length > 0 ? unit.nextMovePath[unit.nextMovePath.length - 1] : unit;
+  }
+
+  function findNearbyEnemies(unit: Unit) {
+    var characters = GameState.currentBoard.allCharacters;
+    var cell = getLastMove(unit);
+    var arr = [];
+    for(var i = 0; i < characters.length; i++) {
+      var c = characters[i];
+      if(!isAlly(c) && isNear(cell, c, unit.RANGE) && isVisible(c)) arr.push(c);
+    }
+    return arr;
   }
 
 
@@ -230,7 +248,7 @@ module Timeline {
     }
 
     // We haven't reached the end, it's unreachable
-    console.log("findPath: End is unreachable");
+    // console.log("findPath: End is unreachable");
     return [];
   }
 

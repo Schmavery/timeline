@@ -221,8 +221,6 @@ var Timeline;
             // if not, we'll check if the user clicked on a movePath cell or a
             // moveArea cell to either add to the path, or remove from the path
             var maybeCharacter = find(characters, clickedCell, comparePoints);
-            if (maybeCharacter)
-                console.log(maybeCharacter.isMoving);
             if (maybeCharacter && Timeline.isAlly(maybeCharacter) && !maybeCharacter.isMoving) {
                 this.selectedUnit = maybeCharacter;
                 console.log(maybeCharacter);
@@ -232,7 +230,7 @@ var Timeline;
                     removeFrom(this.selectedUnit.nextMovePath, clickedCell, comparePoints);
                 }
                 else if (contains(this.moveArea, clickedCell, comparePoints)) {
-                    var lastCellInPath = this.selectedUnit.nextMovePath.length > 0 ? this.selectedUnit.nextMovePath[this.selectedUnit.nextMovePath.length - 1] : this.selectedUnit;
+                    var lastCellInPath = getLastMove(this.selectedUnit);
                     if (!isNear(clickedCell, lastCellInPath)) {
                         var tmp = findPath(this.moveArea, lastCellInPath, clickedCell);
                         this.selectedUnit.nextMovePath = this.selectedUnit.nextMovePath.concat(tmp.slice(0, this.selectedUnit.moveDistance - this.selectedUnit.nextMovePath.length));
@@ -244,21 +242,28 @@ var Timeline;
                     }
                 }
                 else {
-                    var lastCellInPath = this.selectedUnit.nextMovePath.length > 0 ? this.selectedUnit.nextMovePath[this.selectedUnit.nextMovePath.length - 1] : this.selectedUnit;
+                    var lastCellInPath = getLastMove(this.selectedUnit);
                     if (maybeCharacter && !Timeline.isAlly(maybeCharacter) && isNear(maybeCharacter, lastCellInPath, this.selectedUnit.RANGE)) {
                         this.selectedUnit.nextAttack = { damage: this.selectedUnit.DAMAGE, target: maybeCharacter, trigger: lastCellInPath };
                         console.log("Will attack", this.selectedUnit.nextAttack);
                     }
                     else {
-                        this.selectedUnit = null;
-                        this.moveArea = [];
+                        // Don't deselect a character if you clicked on an enemy
+                        if (!maybeCharacter) {
+                            this.selectedUnit = null;
+                            this.moveArea = [];
+                        }
                     }
                 }
             }
+            var targetableEnemies = [];
+            // If we selected a unit
             if (this.selectedUnit) {
                 this.moveArea = getMoveArea(this.selectedUnit.nextMovePath.length > 0 ? this.selectedUnit.nextMovePath[this.selectedUnit.nextMovePath.length - 1] : this.selectedUnit, this.selectedUnit.moveDistance - this.selectedUnit.nextMovePath.length);
+                targetableEnemies = findNearbyEnemies(this.selectedUnit);
             }
             Timeline.Display.drawMoveArea(this.moveArea);
+            Timeline.Display.drawTargetableEnemies(targetableEnemies);
             Timeline.Display.drawMovePath(this.selectedUnit);
         };
         Play.prototype.onMouseUp = function (p) {
@@ -282,7 +287,7 @@ var Timeline;
                     characters[i].isMoving = true;
                     // Remove the empty callback when figured out the optional type
                     // in TS
-                    Timeline.Display.moveUnitAlongPath(characters[i], characters[i].nextMovePath, function (u) {
+                    Timeline.Display.moveUnitAlongPath(characters[i], function (u) {
                         // reset isMoving so we can select the unit again
                         u.isMoving = false;
                         u.nextMovePath = [];
@@ -295,6 +300,21 @@ var Timeline;
         return Play;
     })(Phaser.State);
     Timeline.Play = Play;
+    function getLastMove(unit) {
+        return unit.nextMovePath.length > 0 ? unit.nextMovePath[unit.nextMovePath.length - 1] : unit;
+    }
+    Timeline.getLastMove = getLastMove;
+    function findNearbyEnemies(unit) {
+        var characters = Timeline.GameState.currentBoard.allCharacters;
+        var cell = getLastMove(unit);
+        var arr = [];
+        for (var i = 0; i < characters.length; i++) {
+            var c = characters[i];
+            if (!Timeline.isAlly(c) && isNear(cell, c, unit.RANGE) && isVisible(c))
+                arr.push(c);
+        }
+        return arr;
+    }
     // Returns a path from the start to the end within the given space
     function findPath(space, start, end) {
         var openSet = [start];
@@ -337,7 +357,7 @@ var Timeline;
             }
         }
         // We haven't reached the end, it's unreachable
-        console.log("findPath: End is unreachable");
+        // console.log("findPath: End is unreachable");
         return [];
     }
     function findNeighbours(space, p) {
@@ -658,16 +678,16 @@ var Timeline;
             }
         }
         Display.drawMovePath = drawMovePath;
-        function __drawMovePath(path, movePath) {
-        }
-        function moveUnitAlongPath(unit, path, callback) {
+        function moveUnitAlongPath(unit, callback) {
             moveArea.clear();
             getFromMap(movePathMap, unit).clear();
+            var path = unit.nextMovePath;
             for (var i = 0; i < path.length; i++) {
                 var c = Timeline.getUnitAt(path[i]);
                 if (c && !Timeline.isAlly(c)) {
                     path = path.slice(0, i - c.RANGE < 0 ? 0 : i - c.RANGE);
-                    var lastCell = path.length > 0 ? path[path.length - 1] : unit;
+                    unit.nextMovePath = path;
+                    var lastCell = Timeline.getLastMove(unit);
                     unit.nextAttack = { damage: unit.DAMAGE, target: c, trigger: lastCell };
                     break;
                 }
@@ -691,6 +711,14 @@ var Timeline;
             loop(path, 0);
         }
         Display.moveUnitAlongPath = moveUnitAlongPath;
+        function drawTargetableEnemies(nearbyEnemies) {
+            moveArea.beginFill(0xff0000);
+            for (var i = 0; i < nearbyEnemies.length; i++) {
+                moveArea.drawRect(nearbyEnemies[i].x * Timeline.TILE_SIZE * Timeline.SCALE, nearbyEnemies[i].y * Timeline.TILE_SIZE * Timeline.SCALE, Timeline.TILE_SIZE * Timeline.SCALE, Timeline.TILE_SIZE * Timeline.SCALE);
+            }
+            moveArea.endFill();
+        }
+        Display.drawTargetableEnemies = drawTargetableEnemies;
         function moveUnit(unit, dest, callback) {
             // Change the coordinates of the units
             var X = unit.x * Timeline.TILE_SIZE * Timeline.SCALE;
