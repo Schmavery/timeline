@@ -104,6 +104,7 @@ module Timeline {
     }
 
     export function drawMovePath(unit: Unit) {
+      if(!unit) return;
       __drawMovePath(unit.nextMovePath, getFromMap(movePathMap, unit));
     }
 

@@ -17,6 +17,7 @@ var Timeline;
             this.y = 0;
             this.isMoving = false;
             this.nextMovePath = [];
+            this.visionRange = 2;
         }
         Unit.prototype.setPosition = function (x, y) {
             this.x = x;
@@ -93,6 +94,7 @@ var Timeline;
         GameState.boards = [];
         GameState.currentBoard = null;
         GameState.propertyMap = {};
+        GameState.myTeamNumber = 1;
     })(GameState = Timeline.GameState || (Timeline.GameState = {}));
     var Board = (function () {
         function Board(c) {
@@ -206,6 +208,10 @@ var Timeline;
                         }
                     }
                 }
+                else {
+                    this.selectedUnit = null;
+                    this.moveArea = [];
+                }
             }
             if (this.selectedUnit) {
                 this.moveArea = getMoveArea(this.selectedUnit.nextMovePath.length > 0 ? this.selectedUnit.nextMovePath[this.selectedUnit.nextMovePath.length - 1] : this.selectedUnit, this.selectedUnit.moveDistance - this.selectedUnit.nextMovePath.length);
@@ -253,33 +259,35 @@ var Timeline;
         var gScore = {};
         var fScore = {};
         gScore[hashPoint(start)] = 0;
-        for (var i in space) {
-            gScore[hashPoint(space[i])] = Infinity;
-        }
+        // for (var s in space){
+        //   gScore[hashPoint(space[s])] = Infinity;
+        // }
         fScore[hashPoint(start)] = gScore[hashPoint(start)] + heuristicEstimate(start, end);
         while (openSet.length > 0) {
-            var cur = openSet.reduce(function (acc, val) {
-                if (fScore[hashPoint(val)] < fScore[hashPoint(acc)])
-                    return val;
-                return acc;
-            });
+            var cur = openSet[0];
+            for (var i = 1; i < openSet.length; i++) {
+                if (fScore[hashPoint(openSet[i])] < fScore[hashPoint(cur)])
+                    cur = openSet[i];
+            }
             // we've reached the end, we're all goods
             if (comparePoints(cur, end)) {
                 return constructPath(cameFrom, end);
             }
             remove(openSet, cur, comparePoints);
             closedSet.push(cur);
-            var allNeighbours = findNeighbours(space, cur);
-            for (var i in allNeighbours) {
-                var neighbour = allNeighbours[i];
+            var allNeighbours = findNeighbours(cur);
+            for (var n in allNeighbours) {
+                var neighbour = allNeighbours[n];
                 if (contains(closedSet, neighbour, comparePoints))
                     continue;
                 var tentativeGScore = gScore[hashPoint(cur)] + heuristicEstimate(cur, neighbour);
-                if (!contains(openSet, neighbour, comparePoints) || tentativeGScore < gScore[hashPoint(neighbour)]) {
-                    cameFrom[hashPoint(neighbour)] = cur;
-                    gScore[hashPoint(neighbour)] = tentativeGScore;
-                    fScore[hashPoint(neighbour)] = gScore[hashPoint(neighbour)] + heuristicEstimate(neighbour, end);
-                    if (!contains(openSet, neighbour, comparePoints)) {
+                var neighbourHash = hashPoint(neighbour);
+                var neighbourIsNotInOpenSet = !contains(openSet, neighbour, comparePoints);
+                if (neighbourIsNotInOpenSet || tentativeGScore < gScore[neighbourHash]) {
+                    cameFrom[neighbourHash] = cur;
+                    gScore[neighbourHash] = tentativeGScore;
+                    fScore[neighbourHash] = gScore[neighbourHash] + heuristicEstimate(neighbour, end);
+                    if (neighbourIsNotInOpenSet) {
                         openSet.push(neighbour);
                     }
                 }
@@ -289,14 +297,13 @@ var Timeline;
         console.log("findPath: End is unreachable");
         return [];
     }
-    function findNeighbours(space, p) {
-        var ret = [];
-        for (var i in space) {
-            var cur = space[i];
-            if (hashPoint(cur) !== hashPoint(p) && isNear(cur, p))
-                ret.push(cur);
-        }
-        return ret;
+    function findNeighbours(p) {
+        return [
+            { x: p.x + 1, y: p.y },
+            { x: p.x - 1, y: p.y },
+            { x: p.x, y: p.y + 1 },
+            { x: p.x, y: p.y - 1 },
+        ];
     }
     function constructPath(cameFrom, end) {
         var cur = end;
@@ -310,7 +317,7 @@ var Timeline;
         return path.reverse();
     }
     function heuristicEstimate(p1, p2) {
-        return Math.sqrt((p2.x - p1.x) * (p2.x - p1.x) + (p2.y - p1.y) * (p2.y - p1.y));
+        return Math.abs(p1.x - p2.x) + Math.abs(p1.y - p1.y);
     }
     function isNear(p1, p2, radius) {
         radius = radius || 1;
@@ -373,20 +380,30 @@ var Timeline;
             }
         }
         var tmp = [];
+        var s = Date.now();
         for (var i = 0; i < moveArea.length; i++) {
             if (findPath(moveArea, center, moveArea[i]).length > 0)
                 tmp.push(moveArea[i]);
         }
+        console.log(Date.now() - s);
         return tmp;
     }
     function checkAddTile(moveArea, tile) {
         var prop1 = Timeline.GameState.propertyMap[hashPoint(tile)];
-        if (prop1 && prop1.collision === "true")
+        if (prop1 && prop1.collision === "true" && isVisible(tile))
             return;
         moveArea.push(tile);
     }
-    function checkFogOfWar(point) {
-        // body...
+    function isVisible(point) {
+        var characters = Timeline.GameState.currentBoard.allCharacters;
+        for (var i = 0; i < characters.length; i++) {
+            var c = characters[i];
+            if (c.teamNumber !== Timeline.GameState.myTeamNumber)
+                continue;
+            if (isNear(c, point, c.visionRange))
+                return true;
+        }
+        return false;
     }
     function mouseWheelCallback(event) {
         event.preventDefault();
@@ -404,7 +421,7 @@ var Timeline;
         var arr = map.objects[layerName];
         var ret = [];
         for (var i = 0; i < arr.length; i++) {
-            var character = new Timeline.UnitClasses[arr[i].properties.type](arr[i].properties.teamNumber);
+            var character = new Timeline.UnitClasses[arr[i].properties.type](parseInt(arr[i].properties.teamNumber));
             character.setPosition(~~(arr[i].x / Timeline.TILE_SIZE), ~~(arr[i].y / Timeline.TILE_SIZE) - 1);
             ret.push(character);
         }
@@ -555,6 +572,8 @@ var Timeline;
         }
         Display.drawMoveArea = drawMoveArea;
         function drawMovePath(unit) {
+            if (!unit)
+                return;
             __drawMovePath(unit.nextMovePath, getFromMap(movePathMap, unit));
         }
         Display.drawMovePath = drawMovePath;

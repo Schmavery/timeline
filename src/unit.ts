@@ -9,6 +9,7 @@ module Timeline {
     moveDistance: number;
     isMoving: boolean;
     nextMovePath: Point[];
+    visionRange: number;
 
     HEALTH: number;
     DAMAGE: number;
@@ -24,6 +25,7 @@ module Timeline {
       this.y = 0;
       this.isMoving = false;
       this.nextMovePath = [];
+      this.visionRange = 2;
     }
 
     setPosition(x: number, y: number) {

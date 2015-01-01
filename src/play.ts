@@ -114,8 +114,12 @@ module Timeline {
               this.selectedUnit.nextMovePath.push(clickedCell);
             }
           }
+        } else {
+          this.selectedUnit = null;
+          this.moveArea = [];
         }
       }
+
       if(this.selectedUnit) {
         this.moveArea = getMoveArea(this.selectedUnit.nextMovePath.length > 0 ? this.selectedUnit.nextMovePath[this.selectedUnit.nextMovePath.length - 1] : this.selectedUnit, this.selectedUnit.moveDistance - this.selectedUnit.nextMovePath.length);
       }
@@ -166,17 +170,16 @@ module Timeline {
     var gScore = {};
     var fScore = {};
     gScore[hashPoint(start)] = 0;
-    for (var i in space){
-      gScore[hashPoint(space[i])] = Infinity;
-    }
+    // for (var s in space){
+    //   gScore[hashPoint(space[s])] = Infinity;
+    // }
     fScore[hashPoint(start)] = gScore[hashPoint(start)] + heuristicEstimate(start, end);
 
     while(openSet.length > 0) {
-      var cur = openSet.reduce(function(acc, val) {
-        if(fScore[hashPoint(val)] < fScore[hashPoint(acc)]) return val;
-        return acc;
-      });
-
+      var cur = openSet[0];
+      for(var i = 1; i < openSet.length; i++) {
+        if(fScore[hashPoint(openSet[i])] < fScore[hashPoint(cur)]) cur = openSet[i];
+      }
 
       // we've reached the end, we're all goods
       if(comparePoints(cur, end)) {
@@ -186,19 +189,21 @@ module Timeline {
       remove(openSet, cur, comparePoints);
       closedSet.push(cur);
 
-      var allNeighbours = findNeighbours(space, cur);
-      for (var i in allNeighbours){
-        var neighbour = allNeighbours[i];
+      var allNeighbours = findNeighbours(cur);
+      for (var n in allNeighbours){
+        var neighbour = allNeighbours[n];
         if(contains(closedSet, neighbour, comparePoints)) continue;
 
         var tentativeGScore = gScore[hashPoint(cur)] + heuristicEstimate(cur, neighbour);
-        if(!contains(openSet, neighbour, comparePoints) || tentativeGScore < gScore[hashPoint(neighbour)]) {
+        var neighbourHash = hashPoint(neighbour);
+        var neighbourIsNotInOpenSet = !contains(openSet, neighbour, comparePoints);
+        if(neighbourIsNotInOpenSet || tentativeGScore < gScore[neighbourHash]) {
 
-          cameFrom[hashPoint(neighbour)] = cur;
+          cameFrom[neighbourHash] = cur;
 
-          gScore[hashPoint(neighbour)] = tentativeGScore;
-          fScore[hashPoint(neighbour)] = gScore[hashPoint(neighbour)] + heuristicEstimate(neighbour, end);
-          if(!contains(openSet, neighbour, comparePoints)) {
+          gScore[neighbourHash] = tentativeGScore;
+          fScore[neighbourHash] = gScore[neighbourHash] + heuristicEstimate(neighbour, end);
+          if(neighbourIsNotInOpenSet) {
             openSet.push(neighbour);
           }
         }
@@ -210,14 +215,13 @@ module Timeline {
     return [];
   }
 
-  function findNeighbours(space, p) {
-    var ret = [];
-    // console.log(space);
-    for (var i in space){
-      var cur = space[i];
-      if(hashPoint(cur) !== hashPoint(p) && isNear(cur, p)) ret.push(cur);
-    }
-    return ret;
+  function findNeighbours(p: Point) {
+    return [
+      {x: p.x + 1, y: p.y},
+      {x: p.x - 1, y: p.y},
+      {x: p.x, y: p.y + 1},
+      {x: p.x, y: p.y - 1},
+    ];
   }
 
   function constructPath(cameFrom, end: Point) {
@@ -234,7 +238,7 @@ module Timeline {
   }
 
   function heuristicEstimate(p1, p2) {
-    return Math.sqrt((p2.x - p1.x) * (p2.x - p1.x) + (p2.y - p1.y)*(p2.y - p1.y));
+    return Math.abs(p1.x - p2.x) + Math.abs(p1.y - p1.y);
   }
 
   function isNear(p1, p2, radius?) {
@@ -306,21 +310,30 @@ module Timeline {
       }
     }
     var tmp = [];
+    var s = Date.now();
     for(var i=0; i<moveArea.length; i++) {
       if(findPath(moveArea, center, moveArea[i]).length > 0) tmp.push(moveArea[i]);
     }
+    console.log(Date.now() - s);
     return tmp;
   }
 
   function checkAddTile(moveArea, tile: Point) {
     var prop1 = GameState.propertyMap[hashPoint(tile)];
-    if(prop1 && prop1.collision === "true") return;
+    if(prop1 && prop1.collision === "true" && isVisible(tile)) return;
 
     moveArea.push(tile);
   }
 
-  function checkFogOfWar(point: Point) {
-    // body...
+  function isVisible(point: Point) {
+    var characters = GameState.currentBoard.allCharacters;
+    for(var i = 0; i < characters.length; i++) {
+      var c = characters[i];
+      if(c.teamNumber !== GameState.myTeamNumber) continue;
+      if(isNear(c, point, c.visionRange)) return true;
+    }
+
+    return false;
   }
 
   function mouseWheelCallback(event) {
@@ -342,7 +355,7 @@ module Timeline {
     var arr = map.objects[layerName];
     var ret = [];
     for (var i = 0; i < arr.length; i++) {
-      var character = new UnitClasses[arr[i].properties.type](arr[i].properties.teamNumber);
+      var character = new UnitClasses[arr[i].properties.type](parseInt(arr[i].properties.teamNumber));
       character.setPosition(~~(arr[i].x / TILE_SIZE), ~~(arr[i].y/TILE_SIZE) - 1);
       ret.push(character);
     }
