@@ -9,7 +9,6 @@ module Timeline {
 
     preload() {
       console.log("Preloading Play");
-      Display.cacheGame(this.game);
 
       this.game.load.image("menu-btn", "assets/menu-btn.png");
       this.game.load.tilemap("test-map", "assets/maps/testmap.json", null,
@@ -41,6 +40,9 @@ module Timeline {
       this.layer = map.createLayer("Tile Layer 1");
       map.addTilesetImage("testset", "test-tile-set");
       this.layer.scale.set(SCALE);
+
+      // Init the display
+      Display.init(this.game, map);
 
       //console.log(this.layer);
       var tileset = map.tilesets[map.getTilesetIndex('testset')];
@@ -95,7 +97,7 @@ module Timeline {
       // if not, we'll check if the user clicked on a movePath cell or a
       // moveArea cell to either add to the path, or remove from the path
       var maybeCharacter = find(characters, clickedCell, comparePoints);
-      if(maybeCharacter) {
+      if(maybeCharacter && maybeCharacter.teamNumber === GameState.myTeamNumber) {
         this.selectedUnit = maybeCharacter;
         console.log(maybeCharacter);
       } else if(this.selectedUnit) {
@@ -325,7 +327,7 @@ module Timeline {
     moveArea.push(tile);
   }
 
-  function isVisible(point: Point) {
+  export function isVisible(point: Point) {
     var characters = GameState.currentBoard.allCharacters;
     for(var i = 0; i < characters.length; i++) {
       var c = characters[i];

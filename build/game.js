@@ -119,7 +119,6 @@ var Timeline;
         }
         Play.prototype.preload = function () {
             console.log("Preloading Play");
-            Timeline.Display.cacheGame(this.game);
             this.game.load.image("menu-btn", "assets/menu-btn.png");
             this.game.load.tilemap("test-map", "assets/maps/testmap.json", null, Phaser.Tilemap.TILED_JSON);
             this.game.load.image("test-tile-set", "assets/maps/test-tile-set.png");
@@ -144,6 +143,8 @@ var Timeline;
             this.layer = map.createLayer("Tile Layer 1");
             map.addTilesetImage("testset", "test-tile-set");
             this.layer.scale.set(Timeline.SCALE);
+            // Init the display
+            Timeline.Display.init(this.game, map);
             //console.log(this.layer);
             var tileset = map.tilesets[map.getTilesetIndex('testset')];
             for (var i = 0; i < map.width; i++) {
@@ -188,7 +189,7 @@ var Timeline;
             // if not, we'll check if the user clicked on a movePath cell or a
             // moveArea cell to either add to the path, or remove from the path
             var maybeCharacter = find(characters, clickedCell, comparePoints);
-            if (maybeCharacter) {
+            if (maybeCharacter && maybeCharacter.teamNumber === Timeline.GameState.myTeamNumber) {
                 this.selectedUnit = maybeCharacter;
                 console.log(maybeCharacter);
             }
@@ -405,6 +406,7 @@ var Timeline;
         }
         return false;
     }
+    Timeline.isVisible = isVisible;
     function mouseWheelCallback(event) {
         event.preventDefault();
         var curTime = Date.now();
@@ -498,21 +500,21 @@ var Timeline;
         };
         var movePathMap = [];
         var spriteMap = [];
+        var fogOfWar = null;
         var game = null;
+        var map = null;
         var moveArea = null;
-        var movePath = null;
-        function cacheGame(g) {
+        function init(g, m) {
             game = g;
+            map = m;
             moveArea = game.add.graphics(0, 0);
-            // moveArea.lineStyle(2, 0x00d9ff, 1);
             moveArea.alpha = 0.5;
-            // movePath = game.add.graphics(0, 0);
-            moveArea.movePath = 0.5;
+            fogOfWar = game.add.graphics(0, 0);
+            fogOfWar.alpha = 0.5;
         }
-        Display.cacheGame = cacheGame;
+        Display.init = init;
         function loadSpritesFromObjects(arr) {
             arr.map(function (u) {
-                console.log(typeof u);
                 var sprite = game.add.sprite(Timeline.SCALE * Timeline.TILE_SIZE * u.x, Timeline.SCALE * Timeline.TILE_SIZE * u.y, "characters", 0);
                 sprite.scale.set(Timeline.SCALE);
                 sprite.animations.add('moveLeft', [20, 21, 22, 23], 10, true);
@@ -550,15 +552,35 @@ var Timeline;
                     Display.drawMovePath(c);
                 }
             }
+            drawFogOfWar();
         }
         Display.drawBoard = drawBoard;
-        // export function drawSelected(unit: Unit) {
-        //   if(moveArea) moveArea.destroy();
-        //   moveArea = game.add.graphics(0, 0);
-        //   game.world.bringToTop(moveArea);
-        //   moveArea.lineStyle(2, 0x00d9ff, 1);
-        //   // moveArea.drawRect(unit.x * TILE_SIZE * SCALE, unit.y * TILE_SIZE * SCALE, TILE_SIZE * SCALE, TILE_SIZE * SCALE);
-        // }
+        function drawFogOfWar() {
+            fogOfWar.clear();
+            fogOfWar.beginFill(0x000000);
+            var characters = Timeline.GameState.currentBoard.allCharacters;
+            for (var k = 0; k < characters.length; k++) {
+                var sprite = getFromMap(spriteMap, characters[k]);
+                sprite.exists = false;
+            }
+            for (var i = 0; i < map.width; i++) {
+                for (var j = 0; j < map.height; j++) {
+                    if (!Timeline.isVisible({ x: i, y: j })) {
+                        fogOfWar.drawRect(i * Timeline.TILE_SIZE * Timeline.SCALE, j * Timeline.TILE_SIZE * Timeline.SCALE, Timeline.TILE_SIZE * Timeline.SCALE, Timeline.TILE_SIZE * Timeline.SCALE);
+                    }
+                    else {
+                        for (var k = 0; k < characters.length; k++) {
+                            if (characters[k].x === i && characters[k].y === j) {
+                                var sprite = getFromMap(spriteMap, characters[k]);
+                                sprite.exists = true;
+                            }
+                        }
+                    }
+                }
+            }
+            fogOfWar.endFill();
+        }
+        Display.drawFogOfWar = drawFogOfWar;
         function drawMoveArea(area) {
             moveArea.clear();
             game.world.bringToTop(moveArea);
@@ -617,6 +639,7 @@ var Timeline;
             };
             unit.x = clonedDest.x;
             unit.y = clonedDest.y;
+            drawFogOfWar();
             // Create the tween from the sprite mapped from the unit
             var sprite = getFromMap(spriteMap, unit);
             var tween = game.add.tween(sprite.position);
