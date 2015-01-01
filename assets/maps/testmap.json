@@ -12,7 +12,6 @@
          "y":0
         }, 
         {
-         "draworder":"topdown",
          "height":20,
          "name":"Characters",
          "objects":[
@@ -25,7 +24,6 @@
                      "isAlly":"true",
                      "type":"Archer"
                     },
-                 "rotation":0,
                  "type":"player1",
                  "visible":true,
                  "width":0,
@@ -41,7 +39,6 @@
                      "isAlly":"false",
                      "type":"Warrior"
                     },
-                 "rotation":0,
                  "type":"Warrior",
                  "visible":true,
                  "width":0,
@@ -57,7 +54,6 @@
                      "isAlly":"false",
                      "type":"Warrior"
                     },
-                 "rotation":0,
                  "type":"Warrior",
                  "visible":true,
                  "width":0,
@@ -73,7 +69,6 @@
                      "isAlly":"false",
                      "type":"Warrior"
                     },
-                 "rotation":0,
                  "type":"Warrior",
                  "visible":true,
                  "width":0,
@@ -89,7 +84,6 @@
                      "isAlly":"false",
                      "type":"Warrior"
                     },
-                 "rotation":0,
                  "type":"Warrior",
                  "visible":true,
                  "width":0,
@@ -105,7 +99,6 @@
                      "isAlly":"true",
                      "type":"Warrior"
                     },
-                 "rotation":0,
                  "type":"player1",
                  "visible":true,
                  "width":0,
@@ -121,7 +114,6 @@
                      "isAlly":"true",
                      "type":"Warrior"
                     },
-                 "rotation":0,
                  "type":"player1",
                  "visible":true,
                  "width":0,
@@ -137,7 +129,6 @@
                      "isAlly":"true",
                      "type":"Mage"
                     },
-                 "rotation":0,
                  "type":"player1",
                  "visible":true,
                  "width":0,
@@ -156,7 +147,6 @@
     {
 
     },
- "renderorder":"right-down",
  "tileheight":16,
  "tilesets":[
         {
@@ -172,6 +162,13 @@
             },
          "spacing":0,
          "tileheight":16,
+         "tileproperties":
+            {
+             "71":
+                {
+                 "collision":"true"
+                }
+            },
          "tilewidth":16
         }, 
         {

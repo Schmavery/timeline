@@ -96,6 +96,7 @@ var Timeline;
     (function (GameState) {
         GameState.boards = [];
         GameState.currentBoard = null;
+        GameState.propertyMap = {};
     })(GameState = Timeline.GameState || (Timeline.GameState = {}));
     // SINGLETON PRIVATE FACTORY METHOD
     // export var GameState = new _GameState();
@@ -147,6 +148,17 @@ var Timeline;
             this.layer = map.createLayer("Tile Layer 1");
             map.addTilesetImage("testset", "test-tile-set");
             this.layer.scale.set(Timeline.SCALE);
+            //console.log(this.layer);
+            var tileset = map.tilesets[map.getTilesetIndex('testset')];
+            for (var i = 0; i < map.width; i++) {
+                for (var j = 0; j < map.height; j++) {
+                    var tile = map.getTile(i, j, "Tile Layer 1");
+                    if (Object.keys(tile.properties).length !== 0) {
+                        Timeline.GameState.propertyMap[hashPoint({ x: i, y: j })] = tile.properties;
+                    }
+                }
+            }
+            console.log(Timeline.GameState.propertyMap);
             var characters = createGameObjectFromLayer("Characters", map);
             var board = new Timeline.Board(characters);
             Timeline.GameState.boards.push(board);

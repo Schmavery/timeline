@@ -42,6 +42,17 @@ module Timeline {
       map.addTilesetImage("testset", "test-tile-set");
       this.layer.scale.set(SCALE);
 
+      //console.log(this.layer);
+      var tileset = map.tilesets[map.getTilesetIndex('testset')];
+      for (var i = 0; i < map.width; i++){
+        for (var j = 0; j < map.height; j++){
+          var tile = map.getTile(i, j, "Tile Layer 1");
+          if (Object.keys(tile.properties).length !== 0){
+            GameState.propertyMap[hashPoint({x:i, y:j})] = tile.properties;
+          }
+        }
+      }
+      console.log(GameState.propertyMap);
 
       var characters = createGameObjectFromLayer("Characters", map);
       var board = new Board(characters);
