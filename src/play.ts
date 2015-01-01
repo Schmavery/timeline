@@ -97,6 +97,7 @@ module Timeline {
       // if not, we'll check if the user clicked on a movePath cell or a
       // moveArea cell to either add to the path, or remove from the path
       var maybeCharacter = find(characters, clickedCell, comparePoints);
+      if(maybeCharacter) console.log(maybeCharacter.isMoving);
       if(maybeCharacter && isAlly(maybeCharacter) && !maybeCharacter.isMoving) {
         this.selectedUnit = maybeCharacter;
         console.log(maybeCharacter);
@@ -117,8 +118,16 @@ module Timeline {
             }
           }
         } else {
-          this.selectedUnit = null;
-          this.moveArea = [];
+          var lastCellInPath = this.selectedUnit.nextMovePath.length > 0 ?
+                               this.selectedUnit.nextMovePath[this.selectedUnit.nextMovePath.length - 1] :
+                               this.selectedUnit;
+          if(maybeCharacter && !isAlly(maybeCharacter) && isNear(maybeCharacter, lastCellInPath, this.selectedUnit.RANGE)) {
+            this.selectedUnit.nextAttack = {damage:this.selectedUnit.DAMAGE, target: maybeCharacter, trigger: lastCellInPath};
+            console.log("Will attack", this.selectedUnit.nextAttack);
+          } else{
+            this.selectedUnit = null;
+            this.moveArea = [];
+          }
         }
       }
 
@@ -148,7 +157,7 @@ module Timeline {
     playTurn() {
       var characters = GameState.currentBoard.allCharacters;
       var max = characters.length;
-      for (var i = 0; i < max; i++){
+      for (var i = 0; i < max; i++) {
         if(!characters[i].isMoving && characters[i].nextMovePath.length > 0) {
           characters[i].isMoving = true;
           // Remove the empty callback when figured out the optional type
@@ -160,6 +169,8 @@ module Timeline {
           });
         }
       }
+      this.selectedUnit = null;
+      this.moveArea = [];
     }
   }
 
@@ -253,7 +264,7 @@ module Timeline {
     return "" + p.x + "." + p.y;
   }
 
-  function comparePoints(p1, p2) {
+  export function comparePoints(p1, p2) {
     return p1.x === p2.x && p1.y === p2.y;
   }
 

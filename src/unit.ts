@@ -1,5 +1,10 @@
 /// <reference path="references.ts" />
 module Timeline {
+  interface Attack {
+    damage: number;
+    target: Unit;
+    trigger: Point;
+  }
   export class Unit {
     x: number;
     y: number;
@@ -9,6 +14,8 @@ module Timeline {
     moveDistance: number;
     isMoving: boolean;
     nextMovePath: Point[];
+    nextAttack: Attack;
+
     visionRange: number;
     range: number;
 

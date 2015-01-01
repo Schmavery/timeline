@@ -210,6 +210,8 @@ var Timeline;
             // if not, we'll check if the user clicked on a movePath cell or a
             // moveArea cell to either add to the path, or remove from the path
             var maybeCharacter = find(characters, clickedCell, comparePoints);
+            if (maybeCharacter)
+                console.log(maybeCharacter.isMoving);
             if (maybeCharacter && Timeline.isAlly(maybeCharacter) && !maybeCharacter.isMoving) {
                 this.selectedUnit = maybeCharacter;
                 console.log(maybeCharacter);
@@ -231,8 +233,15 @@ var Timeline;
                     }
                 }
                 else {
-                    this.selectedUnit = null;
-                    this.moveArea = [];
+                    var lastCellInPath = this.selectedUnit.nextMovePath.length > 0 ? this.selectedUnit.nextMovePath[this.selectedUnit.nextMovePath.length - 1] : this.selectedUnit;
+                    if (maybeCharacter && !Timeline.isAlly(maybeCharacter) && isNear(maybeCharacter, lastCellInPath, this.selectedUnit.RANGE)) {
+                        this.selectedUnit.nextAttack = { damage: this.selectedUnit.DAMAGE, target: maybeCharacter, trigger: lastCellInPath };
+                        console.log("Will attack", this.selectedUnit.nextAttack);
+                    }
+                    else {
+                        this.selectedUnit = null;
+                        this.moveArea = [];
+                    }
                 }
             }
             if (this.selectedUnit) {
@@ -269,6 +278,8 @@ var Timeline;
                     });
                 }
             }
+            this.selectedUnit = null;
+            this.moveArea = [];
         };
         return Play;
     })(Phaser.State);
@@ -354,6 +365,7 @@ var Timeline;
     function comparePoints(p1, p2) {
         return p1.x === p2.x && p1.y === p2.y;
     }
+    Timeline.comparePoints = comparePoints;
     function remove(arr, el, f) {
         var max = arr.length;
         var i = 0;
@@ -616,20 +628,26 @@ var Timeline;
         function drawMovePath(unit) {
             if (!unit)
                 return;
-            __drawMovePath(unit.nextMovePath, getFromMap(movePathMap, unit));
-        }
-        Display.drawMovePath = drawMovePath;
-        function __drawMovePath(path, movePath) {
+            var path = unit.nextMovePath;
+            var movePath = getFromMap(movePathMap, unit);
             movePath.clear();
             game.world.bringToTop(movePath);
             movePath.lineStyle(2, 0x00d9ff, 1);
-            movePath.beginFill(0xff0033);
+            movePath.beginFill(0x00ff33);
             movePath.alpha = 0.5;
             for (var i = 0; i < path.length; i++) {
                 var square = path[i];
                 movePath.drawRect(square.x * Timeline.TILE_SIZE * Timeline.SCALE, square.y * Timeline.TILE_SIZE * Timeline.SCALE, Timeline.TILE_SIZE * Timeline.SCALE, Timeline.TILE_SIZE * Timeline.SCALE);
             }
             movePath.endFill();
+            if (unit.nextAttack) {
+                movePath.lineStyle(5, 0xff0000, 1);
+                movePath.moveTo((unit.nextAttack.trigger.x * Timeline.TILE_SIZE + Timeline.TILE_SIZE / 2) * Timeline.SCALE, (unit.nextAttack.trigger.y * Timeline.TILE_SIZE + Timeline.TILE_SIZE / 2) * Timeline.SCALE);
+                movePath.lineTo((unit.nextAttack.target.x * Timeline.TILE_SIZE + Timeline.TILE_SIZE / 2) * Timeline.SCALE, (unit.nextAttack.target.y * Timeline.TILE_SIZE + Timeline.TILE_SIZE / 2) * Timeline.SCALE);
+            }
+        }
+        Display.drawMovePath = drawMovePath;
+        function __drawMovePath(path, movePath) {
         }
         function moveUnitAlongPath(unit, path, callback) {
             moveArea.clear();
@@ -638,6 +656,8 @@ var Timeline;
                 var c = Timeline.getUnitAt(path[i]);
                 if (c && !Timeline.isAlly(c)) {
                     path = path.slice(0, i - c.RANGE < 0 ? 0 : i - c.RANGE);
+                    var lastCell = path.length > 0 ? path[path.length - 1] : unit;
+                    unit.nextAttack = { damage: unit.DAMAGE, target: c, trigger: lastCell };
                     break;
                 }
             }
@@ -648,6 +668,10 @@ var Timeline;
                     // console.log(anim);
                     // anim.complete();
                     return callback(unit);
+                }
+                if (unit.nextAttack && Timeline.comparePoints(unit.nextAttack.trigger, arr[j])) {
+                    console.log("Attacking", unit.nextAttack);
+                    unit.nextAttack = null;
                 }
                 Display.moveUnit(unit, arr[j], function () {
                     loop(arr, j + 1);

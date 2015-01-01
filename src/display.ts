@@ -10,6 +10,7 @@ module Timeline {
 
     var movePathMap: {key: Unit; val: Phaser.Graphics}[] = [];
     var spriteMap: {key: Unit; val: Phaser.Sprite}[] = [];
+
     var fogOfWar: Phaser.Graphics = null;
     var game: Phaser.Game = null;
     var map: Phaser.Tilemap = null;
@@ -119,15 +120,13 @@ module Timeline {
 
     export function drawMovePath(unit: Unit) {
       if(!unit) return;
-      __drawMovePath(unit.nextMovePath, getFromMap(movePathMap, unit));
-    }
-
-    function __drawMovePath(path: Point[], movePath: Phaser.Graphics) {
+      var path = unit.nextMovePath;
+      var movePath = getFromMap(movePathMap, unit);
       movePath.clear();
 
       game.world.bringToTop(movePath);
       movePath.lineStyle(2, 0x00d9ff, 1);
-      movePath.beginFill(0xff0033);
+      movePath.beginFill(0x00ff33);
       movePath.alpha = 0.5;
 
       for (var i = 0; i < path.length; i++) {
@@ -137,6 +136,15 @@ module Timeline {
       }
 
       movePath.endFill();
+
+      if(unit.nextAttack) {
+        movePath.lineStyle(5, 0xff0000, 1);
+        movePath.moveTo((unit.nextAttack.trigger.x * TILE_SIZE + TILE_SIZE / 2) * SCALE, (unit.nextAttack.trigger.y * TILE_SIZE + TILE_SIZE / 2) * SCALE);
+        movePath.lineTo((unit.nextAttack.target.x * TILE_SIZE + TILE_SIZE / 2) * SCALE, (unit.nextAttack.target.y * TILE_SIZE + TILE_SIZE / 2) * SCALE);
+      }
+    }
+
+    function __drawMovePath(path: Point[], movePath: Phaser.Graphics) {
     }
 
     export function moveUnitAlongPath(unit: Unit, path: Point[], callback) {
@@ -147,6 +155,8 @@ module Timeline {
         var c = getUnitAt(path[i]);
         if(c && !isAlly(c)) {
           path = path.slice(0, i - c.RANGE < 0 ? 0 : i - c.RANGE);
+          var lastCell = path.length > 0 ? path[path.length - 1] : unit;
+          unit.nextAttack = {damage: unit.DAMAGE, target: c, trigger: lastCell};
           break;
         }
       }
@@ -157,6 +167,10 @@ module Timeline {
           // console.log(anim);
           // anim.complete();
           return callback(unit);
+        }
+        if(unit.nextAttack && comparePoints(unit.nextAttack.trigger, arr[j])) {
+          console.log("Attacking", unit.nextAttack);
+          unit.nextAttack = null;
         }
         Display.moveUnit(unit, arr[j], function() {
           loop(arr, j+1);
