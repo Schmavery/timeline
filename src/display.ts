@@ -10,24 +10,25 @@ module Timeline {
 
     var movePathMap: {key: Unit; val: Phaser.Graphics}[] = [];
     var spriteMap: {key: Unit; val: Phaser.Sprite}[] = [];
-    var game = null;
-    var moveArea = null;
-    var movePath = null;
 
-    export function cacheGame(g: Phaser.Game) {
+    var fogOfWar: Phaser.Graphics = null;
+    var game: Phaser.Game = null;
+    var map: Phaser.Tilemap = null;
+    var moveArea: Phaser.Graphics = null;
+
+    export function init(g: Phaser.Game, m: Phaser.Tilemap) {
       game = g;
+      map = m;
 
       moveArea = game.add.graphics(0, 0);
-      // moveArea.lineStyle(2, 0x00d9ff, 1);
       moveArea.alpha = 0.5;
 
-      // movePath = game.add.graphics(0, 0);
-      moveArea.movePath = 0.5;
+      fogOfWar = game.add.graphics(0, 0);
+      fogOfWar.alpha = 0.5;
     }
 
     export function loadSpritesFromObjects(arr: Unit[]) {
       arr.map((u) => {
-        console.log(typeof u);
         var sprite = game.add.sprite(SCALE * TILE_SIZE * u.x, SCALE * TILE_SIZE * u.y, "characters", 0);
         sprite.scale.set(SCALE);
         sprite.animations.add('moveLeft', [20, 21, 22, 23], 10, true);
@@ -76,16 +77,30 @@ module Timeline {
           Display.drawMovePath(c);
         }
       }
+
+      drawFogOfWar();
     }
 
-    // export function drawSelected(unit: Unit) {
-    //   if(moveArea) moveArea.destroy();
-
-    //   moveArea = game.add.graphics(0, 0);
-    //   game.world.bringToTop(moveArea);
-    //   moveArea.lineStyle(2, 0x00d9ff, 1);
-    //   // moveArea.drawRect(unit.x * TILE_SIZE * SCALE, unit.y * TILE_SIZE * SCALE, TILE_SIZE * SCALE, TILE_SIZE * SCALE);
-    // }
+    export function drawFogOfWar() {
+      fogOfWar.clear();
+      fogOfWar.beginFill(0x000000);
+      var characters = GameState.currentBoard.allCharacters;
+      for(var k = 0; k < characters.length; k++) {
+        var sprite = getFromMap(spriteMap, characters[k]);
+        sprite.exists = false;
+      }
+      for(var i = 0; i < map.width; i++) {
+        for(var j = 0; j < map.height; j++) {
+          if(!isVisible({x: i, y: j})) {
+            fogOfWar.drawRect(i * TILE_SIZE * SCALE, j * TILE_SIZE * SCALE, TILE_SIZE * SCALE, TILE_SIZE * SCALE);
+          } else {
+            var sprite = getFromMap(spriteMap, getUnitAt(new Point(i, j)));
+            if(sprite) sprite.exists = true;
+          }
+        }
+      }
+      fogOfWar.endFill();
+    }
 
     export function drawMoveArea(area: Point[]) {
       moveArea.clear();
@@ -104,15 +119,14 @@ module Timeline {
     }
 
     export function drawMovePath(unit: Unit) {
-      __drawMovePath(unit.nextMovePath, getFromMap(movePathMap, unit));
-    }
-
-    function __drawMovePath(path: Point[], movePath: Phaser.Graphics) {
+      if(!unit) return;
+      var path = unit.nextMovePath;
+      var movePath = getFromMap(movePathMap, unit);
       movePath.clear();
 
       game.world.bringToTop(movePath);
       movePath.lineStyle(2, 0x00d9ff, 1);
-      movePath.beginFill(0xff0033);
+      movePath.beginFill(0x00ff33);
       movePath.alpha = 0.5;
 
       for (var i = 0; i < path.length; i++) {
@@ -122,12 +136,30 @@ module Timeline {
       }
 
       movePath.endFill();
+
+      if(unit.nextAttack) {
+        movePath.lineStyle(5, 0xff0000, 1);
+        movePath.moveTo((unit.nextAttack.trigger.x * TILE_SIZE + TILE_SIZE / 2) * SCALE, (unit.nextAttack.trigger.y * TILE_SIZE + TILE_SIZE / 2) * SCALE);
+        movePath.lineTo((unit.nextAttack.target.x * TILE_SIZE + TILE_SIZE / 2) * SCALE, (unit.nextAttack.target.y * TILE_SIZE + TILE_SIZE / 2) * SCALE);
+      }
+    }
+
+    function __drawMovePath(path: Point[], movePath: Phaser.Graphics) {
     }
 
     export function moveUnitAlongPath(unit: Unit, path: Point[], callback) {
       moveArea.clear();
       getFromMap(movePathMap, unit).clear();
 
+      for(var i = 0; i < path.length; i++) {
+        var c = getUnitAt(path[i]);
+        if(c && !isAlly(c)) {
+          path = path.slice(0, i - c.RANGE < 0 ? 0 : i - c.RANGE);
+          var lastCell = path.length > 0 ? path[path.length - 1] : unit;
+          unit.nextAttack = {damage: unit.DAMAGE, target: c, trigger: lastCell};
+          break;
+        }
+      }
       var loop = function(arr, j) {
         if(j >= arr.length) {
           // var sprite = getFromMap(spriteMap, unit);
@@ -135,6 +167,10 @@ module Timeline {
           // console.log(anim);
           // anim.complete();
           return callback(unit);
+        }
+        if(unit.nextAttack && comparePoints(unit.nextAttack.trigger, arr[j])) {
+          console.log("Attacking", unit.nextAttack);
+          unit.nextAttack = null;
         }
         Display.moveUnit(unit, arr[j], function() {
           loop(arr, j+1);
@@ -153,6 +189,8 @@ module Timeline {
       }
       unit.x = clonedDest.x;
       unit.y = clonedDest.y;
+
+      drawFogOfWar();
 
       // Create the tween from the sprite mapped from the unit
       var sprite = getFromMap(spriteMap, unit);
