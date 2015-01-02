@@ -190,18 +190,19 @@ module Timeline {
       }
       tween.to(clonedDest, 400, Phaser.Easing.Exponential.In, true);
       tween.onComplete.add(function() {
-        var emitter = game.add.emitter(unit.nextAttack.target.x * TILE_SIZE * SCALE, unit.nextAttack.target.y * TILE_SIZE * SCALE, unit.nextAttack.damage);
+      var emitter = game.add.emitter((unit.nextAttack.target.x + 0.5) * TILE_SIZE * SCALE,
+          (unit.nextAttack.target.y + 0.5) * TILE_SIZE * SCALE, unit.nextAttack.damage);
 
-        //  Here we're passing an array of image keys. It will pick one at
-        // random when emitting a new particle.
-        emitter.makeParticles(['-1']);
+        emitter.makeParticles('-1');
 
-        emitter.setYSpeed(50,100);
-        emitter.setXSpeed(-10,10);
+        emitter.setYSpeed(-100,-200);
+        emitter.setXSpeed(-75,75);
         emitter.setRotation(0,0);
-        // emitter.setAll('body.allowGravity', true);
-        emitter.start(false, 500);
-        emitter.update();
+        emitter.gravity = 500;
+        emitter.setAlpha(1, 0, 1000, Phaser.Easing.Exponential.In);
+
+        emitter.start(true, 700, null, unit.nextAttack.damage);
+        //emitter.update();
         var tween2 = game.add.tween(sprite.position);
         var clonedDest2 = {
           x: unit.x * TILE_SIZE * SCALE,
