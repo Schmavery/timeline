@@ -46,7 +46,7 @@ var Timeline;
         function Warrior(teamNumber) {
             _super.call(this, teamNumber);
             this.HEALTH = 3;
-            this.DAMAGE = 2;
+            this.DAMAGE = 20;
             this.AP = 3;
             this.RANGE = 1;
             this.moveDistance = 5;
@@ -141,6 +141,7 @@ var Timeline;
         Play.prototype.preload = function () {
             console.log("Preloading Play");
             this.game.load.image("menu-btn", "assets/menu-btn.png");
+            this.game.load.image("-1", "assets/-1.png");
             this.game.load.tilemap("test-map", "assets/maps/testmap.json", null, Phaser.Tilemap.TILED_JSON);
             this.game.load.image("test-tile-set", "assets/maps/test-tile-set.png");
             this.game.load.spritesheet("characters", "assets/maps/people.png", 16, 16, 50);
@@ -221,7 +222,7 @@ var Timeline;
             // if not, we'll check if the user clicked on a movePath cell or a
             // moveArea cell to either add to the path, or remove from the path
             var maybeCharacter = find(characters, clickedCell, comparePoints);
-            if (maybeCharacter && Timeline.isAlly(maybeCharacter) && !maybeCharacter.isMoving) {
+            if (maybeCharacter && Timeline.isAlly(maybeCharacter) && !maybeCharacter.isMoving && maybeCharacter !== this.selectedUnit) {
                 this.selectedUnit = maybeCharacter;
                 console.log(maybeCharacter);
             }
@@ -700,17 +701,51 @@ var Timeline;
                     // anim.complete();
                     return callback(unit);
                 }
-                if (unit.nextAttack && Timeline.comparePoints(unit.nextAttack.trigger, arr[j])) {
-                    console.log("Attacking", unit.nextAttack);
-                    unit.nextAttack = null;
-                }
                 Display.moveUnit(unit, arr[j], function () {
+                    if (unit.nextAttack && Timeline.comparePoints(unit.nextAttack.trigger, arr[j])) {
+                        console.log("Attacking", unit.nextAttack);
+                        drawAttack(unit, function () {
+                            loop(arr, j + 1);
+                        });
+                        return;
+                    }
                     loop(arr, j + 1);
                 });
             };
             loop(path, 0);
         }
         Display.moveUnitAlongPath = moveUnitAlongPath;
+        function drawAttack(unit, callback) {
+            var sprite = getFromMap(spriteMap, unit);
+            var tween = game.add.tween(sprite.position);
+            var clonedDest = {
+                x: unit.nextAttack.target.x * Timeline.TILE_SIZE * Timeline.SCALE,
+                y: unit.nextAttack.target.y * Timeline.TILE_SIZE * Timeline.SCALE
+            };
+            tween.to(clonedDest, 400, Phaser.Easing.Exponential.In, true);
+            tween.onComplete.add(function () {
+                var emitter = game.add.emitter(unit.nextAttack.target.x * Timeline.TILE_SIZE * Timeline.SCALE, unit.nextAttack.target.y * Timeline.TILE_SIZE * Timeline.SCALE, unit.nextAttack.damage);
+                //  Here we're passing an array of image keys. It will pick one at
+                // random when emitting a new particle.
+                emitter.makeParticles(['-1']);
+                emitter.setYSpeed(50, 100);
+                emitter.setXSpeed(-10, 10);
+                emitter.setRotation(0, 0);
+                // emitter.setAll('body.allowGravity', true);
+                emitter.start(false, 500);
+                emitter.update();
+                var tween2 = game.add.tween(sprite.position);
+                var clonedDest2 = {
+                    x: unit.x * Timeline.TILE_SIZE * Timeline.SCALE,
+                    y: unit.y * Timeline.TILE_SIZE * Timeline.SCALE
+                };
+                tween2.to(clonedDest2, 400, Phaser.Easing.Exponential.Out, true);
+                tween2.onComplete.add(function () {
+                    unit.nextAttack = null;
+                    callback();
+                }, this);
+            }, this);
+        }
         function drawTargetableEnemies(nearbyEnemies) {
             moveArea.beginFill(0xff0000);
             for (var i = 0; i < nearbyEnemies.length; i++) {

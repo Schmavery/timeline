@@ -10,6 +10,7 @@ module Timeline {
     }
   }
 
+
   export module GameState {
     export var boards: Board[] = [];
     export var currentBoard: Board = null;

@@ -11,6 +11,7 @@ module Timeline {
       console.log("Preloading Play");
 
       this.game.load.image("menu-btn", "assets/menu-btn.png");
+      this.game.load.image("-1", "assets/-1.png");
       this.game.load.tilemap("test-map", "assets/maps/testmap.json", null,
       Phaser.Tilemap.TILED_JSON);
       this.game.load.image("test-tile-set", "assets/maps/test-tile-set.png");
@@ -104,7 +105,7 @@ module Timeline {
       // if not, we'll check if the user clicked on a movePath cell or a
       // moveArea cell to either add to the path, or remove from the path
       var maybeCharacter = find(characters, clickedCell, comparePoints);
-      if(maybeCharacter && isAlly(maybeCharacter) && !maybeCharacter.isMoving) {
+      if(maybeCharacter && isAlly(maybeCharacter) && !maybeCharacter.isMoving && maybeCharacter !== this.selectedUnit) {
         this.selectedUnit = maybeCharacter;
         console.log(maybeCharacter);
       } else if(this.selectedUnit) {

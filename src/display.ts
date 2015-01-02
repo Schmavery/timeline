@@ -167,15 +167,52 @@ module Timeline {
           // anim.complete();
           return callback(unit);
         }
-        if(unit.nextAttack && comparePoints(unit.nextAttack.trigger, arr[j])) {
-          console.log("Attacking", unit.nextAttack);
-          unit.nextAttack = null;
-        }
         Display.moveUnit(unit, arr[j], function() {
+          if(unit.nextAttack && comparePoints(unit.nextAttack.trigger, arr[j])) {
+            console.log("Attacking", unit.nextAttack);
+            drawAttack(unit, () => {
+              loop(arr, j+1);
+            });
+            return;
+          }
           loop(arr, j+1);
         });
       };
       loop(path, 0);
+    }
+
+    function drawAttack(unit: Unit, callback) {
+      var sprite = getFromMap(spriteMap, unit);
+      var tween = game.add.tween(sprite.position);
+      var clonedDest = {
+        x: unit.nextAttack.target.x * TILE_SIZE * SCALE,
+        y: unit.nextAttack.target.y * TILE_SIZE * SCALE
+      }
+      tween.to(clonedDest, 400, Phaser.Easing.Exponential.In, true);
+      tween.onComplete.add(function() {
+        var emitter = game.add.emitter(unit.nextAttack.target.x * TILE_SIZE * SCALE, unit.nextAttack.target.y * TILE_SIZE * SCALE, unit.nextAttack.damage);
+
+        //  Here we're passing an array of image keys. It will pick one at
+        // random when emitting a new particle.
+        emitter.makeParticles(['-1']);
+
+        emitter.setYSpeed(50,100);
+        emitter.setXSpeed(-10,10);
+        emitter.setRotation(0,0);
+        // emitter.setAll('body.allowGravity', true);
+        emitter.start(false, 500);
+        emitter.update();
+        var tween2 = game.add.tween(sprite.position);
+        var clonedDest2 = {
+          x: unit.x * TILE_SIZE * SCALE,
+          y: unit.y * TILE_SIZE * SCALE
+        }
+        tween2.to(clonedDest2, 400, Phaser.Easing.Exponential.Out, true);
+        tween2.onComplete.add(function() {
+          unit.nextAttack = null;
+          callback();
+        }, this);
+      }, this);
     }
 
     export function drawTargetableEnemies(nearbyEnemies: Point[]) {
