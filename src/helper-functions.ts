@@ -5,6 +5,10 @@ module Timeline {
     unit.nextAttack.target.health -= unit.DAMAGE;
     if(unit.nextAttack.target.isDead()) {
       Display.drawDeath(unit.nextAttack.target);
+      GameState.currentBoard.deadCharacters.push(unit.nextAttack.target);
+      var index =
+        GameState.currentBoard.allCharacters.indexOf(unit.nextAttack.target);
+      GameState.currentBoard.allCharacters.splice(index, 1);
     }
 
     unit.nextAttack = null;

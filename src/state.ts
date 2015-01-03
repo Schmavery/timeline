@@ -20,9 +20,11 @@ module Timeline {
 
   export class Board {
     allCharacters : Unit[];
+    deadCharacters: Unit[];
 
     constructor(c: Unit[]) {
       this.allCharacters = c;
+      this.deadCharacters = [];
     }
 
     clone(): Board {

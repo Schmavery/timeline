@@ -6,6 +6,9 @@ var Timeline;
         unit.nextAttack.target.health -= unit.DAMAGE;
         if (unit.nextAttack.target.isDead()) {
             Timeline.Display.drawDeath(unit.nextAttack.target);
+            Timeline.GameState.currentBoard.deadCharacters.push(unit.nextAttack.target);
+            var index = Timeline.GameState.currentBoard.allCharacters.indexOf(unit.nextAttack.target);
+            Timeline.GameState.currentBoard.allCharacters.splice(index, 1);
         }
         unit.nextAttack = null;
     }
@@ -334,6 +337,7 @@ var Timeline;
     var Board = (function () {
         function Board(c) {
             this.allCharacters = c;
+            this.deadCharacters = [];
         }
         Board.prototype.clone = function () {
             return new Board(this.allCharacters.map(function (c) {
