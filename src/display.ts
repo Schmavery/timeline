@@ -180,7 +180,15 @@ module Timeline {
           loop(arr, j+1);
         });
       };
-      loop(path, 0);
+
+      if(unit.nextAttack && comparePoints(unit.nextAttack.trigger, unit)) {
+        console.log("Attacking", unit.nextAttack);
+        drawAttack(unit, () => {
+          loop(path, 0);
+        });
+      } else {
+        loop(path, 0);
+      }
     }
 
     function drawAttack(unit: Unit, callback) {
@@ -206,23 +214,31 @@ module Timeline {
     }
 
     function drawDamage(unit: Unit) {
-      var emitter = game.add.emitter((unit.nextAttack.target.x + 0.5) * TILE_SIZE * SCALE,
-          (unit.nextAttack.target.y + 0.5) * TILE_SIZE * SCALE, unit.nextAttack.damage);
-
-        emitter.makeParticles('-1');
-
-        emitter.setYSpeed(-100,-200);
-        emitter.setXSpeed(-75,75);
-        emitter.setRotation(0,0);
-        emitter.gravity = 500;
-        emitter.setAlpha(1, 0, 1000, Phaser.Easing.Exponential.In);
-
-        emitter.start(true, 700, null, unit.nextAttack.damage);
+        var dmg = unit.nextAttack.damage;
+        for(var i = 100; i >= 1; i /= 10){
+          var num = ~~(dmg / i);
+          dmg %= i;
+          if (num === 0) continue;
+          var emit = game.add.emitter((unit.nextAttack.target.x + 0.5) * TILE_SIZE * SCALE,
+            (unit.nextAttack.target.y + 0.5) * TILE_SIZE * SCALE, unit.nextAttack.damage);
+          configureEmitter(emit, (-1*i).toString(), num);
+        }
     }
 
     export function drawDeath(unit: Unit) {
       getFromMap(spriteMap, unit).kill();
       removeFromMap(spriteMap, unit);
+    }
+
+    function configureEmitter(emitter, sprite : string, num : number) {
+      emitter.makeParticles(sprite);
+      emitter.setYSpeed(-250,-320);
+      emitter.setXSpeed(-100,100);
+      emitter.setRotation(0,0);
+      emitter.gravity = 400;
+      emitter.setScale(0.75,0.751,0.75,0.751,0);
+      emitter.setAlpha(1, 0, 2500, Phaser.Easing.Exponential.In);
+      emitter.start(true, 2500, null, num);
     }
 
     export function drawTargetableEnemies(nearbyEnemies: Point[]) {

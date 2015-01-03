@@ -65,7 +65,7 @@ module Timeline {
 
   export class Warrior extends Unit {
     HEALTH = 3;
-    DAMAGE = 20;
+    DAMAGE = 256;
     AP = 3;
     RANGE = 1;
     constructor(teamNumber: number){

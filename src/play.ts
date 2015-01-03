@@ -12,6 +12,8 @@ module Timeline {
 
       this.game.load.image("menu-btn", "assets/menu-btn.png");
       this.game.load.image("-1", "assets/-1.png");
+      this.game.load.image("-10", "assets/-10.png");
+      this.game.load.image("-100", "assets/-100.png");
       this.game.load.tilemap("test-map", "assets/maps/testmap.json", null,
       Phaser.Tilemap.TILED_JSON);
       this.game.load.image("test-tile-set", "assets/maps/test-tile-set.png");
