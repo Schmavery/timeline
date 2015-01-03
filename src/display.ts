@@ -190,19 +190,17 @@ module Timeline {
       }
       tween.to(clonedDest, 400, Phaser.Easing.Exponential.In, true);
       tween.onComplete.add(function() {
-      var emitter = game.add.emitter((unit.nextAttack.target.x + 0.5) * TILE_SIZE * SCALE,
-          (unit.nextAttack.target.y + 0.5) * TILE_SIZE * SCALE, unit.nextAttack.damage);
 
-        emitter.makeParticles('-1');
+        var dmg = unit.nextAttack.damage;
+        for(var i = 100; i >= 1; i /= 10){
+          var num = ~~(dmg / i);
+          dmg %= i;
+          if (num === 0) continue;
+          var emit = game.add.emitter((unit.nextAttack.target.x + 0.5) * TILE_SIZE * SCALE,
+            (unit.nextAttack.target.y + 0.5) * TILE_SIZE * SCALE, unit.nextAttack.damage);
+          configureEmitter(emit, (-1*i).toString(), num);
+        }
 
-        emitter.setYSpeed(-100,-200);
-        emitter.setXSpeed(-75,75);
-        emitter.setRotation(0,0);
-        emitter.gravity = 500;
-        emitter.setAlpha(1, 0, 1000, Phaser.Easing.Exponential.In);
-
-        emitter.start(true, 700, null, unit.nextAttack.damage);
-        //emitter.update();
         var tween2 = game.add.tween(sprite.position);
         var clonedDest2 = {
           x: unit.x * TILE_SIZE * SCALE,
@@ -214,6 +212,17 @@ module Timeline {
           callback();
         }, this);
       }, this);
+    }
+
+    function configureEmitter(emitter, sprite : string, num : number) {
+      emitter.makeParticles(sprite);
+      emitter.setYSpeed(-100,-200);
+      emitter.setXSpeed(-75,75);
+      emitter.setRotation(0,0);
+      emitter.gravity = 500;
+      emitter.setScale(0.75,0.751,0.75,0.751,0);
+      emitter.setAlpha(1, 0, 1200, Phaser.Easing.Exponential.In);
+      emitter.start(true, 1000, null, num);
     }
 
     export function drawTargetableEnemies(nearbyEnemies: Point[]) {

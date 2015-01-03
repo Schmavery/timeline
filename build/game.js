@@ -46,7 +46,7 @@ var Timeline;
         function Warrior(teamNumber) {
             _super.call(this, teamNumber);
             this.HEALTH = 3;
-            this.DAMAGE = 20;
+            this.DAMAGE = 256;
             this.AP = 3;
             this.RANGE = 1;
             this.moveDistance = 5;
@@ -142,6 +142,8 @@ var Timeline;
             console.log("Preloading Play");
             this.game.load.image("menu-btn", "assets/menu-btn.png");
             this.game.load.image("-1", "assets/-1.png");
+            this.game.load.image("-10", "assets/-10.png");
+            this.game.load.image("-100", "assets/-100.png");
             this.game.load.tilemap("test-map", "assets/maps/testmap.json", null, Phaser.Tilemap.TILED_JSON);
             this.game.load.image("test-tile-set", "assets/maps/test-tile-set.png");
             this.game.load.spritesheet("characters", "assets/maps/people.png", 16, 16, 50);
@@ -724,15 +726,15 @@ var Timeline;
             };
             tween.to(clonedDest, 400, Phaser.Easing.Exponential.In, true);
             tween.onComplete.add(function () {
-                var emitter = game.add.emitter((unit.nextAttack.target.x + 0.5) * Timeline.TILE_SIZE * Timeline.SCALE, (unit.nextAttack.target.y + 0.5) * Timeline.TILE_SIZE * Timeline.SCALE, unit.nextAttack.damage);
-                emitter.makeParticles('-1');
-                emitter.setYSpeed(-100, -200);
-                emitter.setXSpeed(-75, 75);
-                emitter.setRotation(0, 0);
-                emitter.gravity = 500;
-                emitter.setAlpha(1, 0, 1000, Phaser.Easing.Exponential.In);
-                emitter.start(true, 700, null, unit.nextAttack.damage);
-                //emitter.update();
+                var dmg = unit.nextAttack.damage;
+                for (var i = 100; i >= 1; i /= 10) {
+                    var num = ~~(dmg / i);
+                    dmg %= i;
+                    if (num === 0)
+                        continue;
+                    var emit = game.add.emitter((unit.nextAttack.target.x + 0.5) * Timeline.TILE_SIZE * Timeline.SCALE, (unit.nextAttack.target.y + 0.5) * Timeline.TILE_SIZE * Timeline.SCALE, unit.nextAttack.damage);
+                    configureEmitter(emit, (-1 * i).toString(), num);
+                }
                 var tween2 = game.add.tween(sprite.position);
                 var clonedDest2 = {
                     x: unit.x * Timeline.TILE_SIZE * Timeline.SCALE,
@@ -744,6 +746,16 @@ var Timeline;
                     callback();
                 }, this);
             }, this);
+        }
+        function configureEmitter(emitter, sprite, num) {
+            emitter.makeParticles(sprite);
+            emitter.setYSpeed(-100, -200);
+            emitter.setXSpeed(-75, 75);
+            emitter.setRotation(0, 0);
+            emitter.gravity = 500;
+            emitter.setScale(0.75, 0.751, 0.75, 0.751, 0);
+            emitter.setAlpha(1, 0, 1200, Phaser.Easing.Exponential.In);
+            emitter.start(true, 1000, null, num);
         }
         function drawTargetableEnemies(nearbyEnemies) {
             moveArea.beginFill(0xff0000);
