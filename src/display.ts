@@ -45,10 +45,10 @@ module Timeline {
       });
     }
 
-    export function moveObject(unit: Unit, name: string) {
-      var sprite = getFromMap(spriteMap, unit);
-      sprite.play(name);
-    }
+    // export function moveObject(unit: Unit, name: string) {
+    //   var sprite = getFromMap(spriteMap, unit);
+    //   sprite.play(name);
+    // }
 
     export function drawBoard(board: Board) {
       moveArea.clear();
@@ -86,6 +86,8 @@ module Timeline {
       fogOfWar.beginFill(0x000000);
       var characters = GameState.currentBoard.allCharacters;
       for(var k = 0; k < characters.length; k++) {
+        if(characters[k].isDead()) continue;
+
         var sprite = getFromMap(spriteMap, characters[k]);
         sprite.exists = false;
       }
@@ -190,6 +192,20 @@ module Timeline {
       }
       tween.to(clonedDest, 400, Phaser.Easing.Exponential.In, true);
       tween.onComplete.add(function() {
+        drawDamage(unit);
+        dealDamage(unit);
+
+        var tween2 = game.add.tween(sprite.position);
+        var clonedDest2 = {
+          x: unit.x * TILE_SIZE * SCALE,
+          y: unit.y * TILE_SIZE * SCALE
+        }
+        tween2.to(clonedDest2, 400, Phaser.Easing.Exponential.Out, true);
+        tween2.onComplete.add(callback, this);
+      }, this);
+    }
+
+    function drawDamage(unit: Unit) {
       var emitter = game.add.emitter((unit.nextAttack.target.x + 0.5) * TILE_SIZE * SCALE,
           (unit.nextAttack.target.y + 0.5) * TILE_SIZE * SCALE, unit.nextAttack.damage);
 
@@ -202,18 +218,11 @@ module Timeline {
         emitter.setAlpha(1, 0, 1000, Phaser.Easing.Exponential.In);
 
         emitter.start(true, 700, null, unit.nextAttack.damage);
-        //emitter.update();
-        var tween2 = game.add.tween(sprite.position);
-        var clonedDest2 = {
-          x: unit.x * TILE_SIZE * SCALE,
-          y: unit.y * TILE_SIZE * SCALE
-        }
-        tween2.to(clonedDest2, 400, Phaser.Easing.Exponential.Out, true);
-        tween2.onComplete.add(function() {
-          unit.nextAttack = null;
-          callback();
-        }, this);
-      }, this);
+    }
+
+    export function drawDeath(unit: Unit) {
+      getFromMap(spriteMap, unit).kill();
+      removeFromMap(spriteMap, unit);
     }
 
     export function drawTargetableEnemies(nearbyEnemies: Point[]) {
@@ -280,6 +289,20 @@ module Timeline {
       }
 
       return null;
+    }
+
+    function removeFromMap(map, key) {
+      var flag = false;
+      for (var i = 0; i < map.length; i++){
+        if(map[i].key === key) {
+          flag = true;
+          continue;
+        }
+        if(flag) {
+          map[i-1] = map[i];
+        }
+      }
+      map.length -= 1;
     }
 
     function pushInMap(map, key, val) {

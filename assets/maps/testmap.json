@@ -12,6 +12,7 @@
          "y":0
         }, 
         {
+         "draworder":"topdown",
          "height":20,
          "name":"Characters",
          "objects":[
@@ -24,11 +25,12 @@
                      "teamNumber":"1",
                      "type":"Archer"
                     },
+                 "rotation":0,
                  "type":"player1",
                  "visible":true,
                  "width":0,
-                 "x":160,
-                 "y":224
+                 "x":240,
+                 "y":80
                 }, 
                 {
                  "gid":298,
@@ -39,6 +41,7 @@
                      "teamNumber":"2",
                      "type":"Warrior"
                     },
+                 "rotation":0,
                  "type":"Warrior",
                  "visible":true,
                  "width":0,
@@ -54,6 +57,7 @@
                      "teamNumber":"2",
                      "type":"Warrior"
                     },
+                 "rotation":0,
                  "type":"Warrior",
                  "visible":true,
                  "width":0,
@@ -69,6 +73,7 @@
                      "teamNumber":"2",
                      "type":"Warrior"
                     },
+                 "rotation":0,
                  "type":"Warrior",
                  "visible":true,
                  "width":0,
@@ -84,6 +89,7 @@
                      "teamNumber":"2",
                      "type":"Warrior"
                     },
+                 "rotation":0,
                  "type":"Warrior",
                  "visible":true,
                  "width":0,
@@ -99,11 +105,12 @@
                      "teamNumber":"1",
                      "type":"Warrior"
                     },
+                 "rotation":0,
                  "type":"player1",
                  "visible":true,
                  "width":0,
-                 "x":64,
-                 "y":224
+                 "x":112,
+                 "y":96
                 }, 
                 {
                  "gid":267,
@@ -114,6 +121,7 @@
                      "teamNumber":"1",
                      "type":"Warrior"
                     },
+                 "rotation":0,
                  "type":"player1",
                  "visible":true,
                  "width":0,
@@ -129,6 +137,7 @@
                      "teamNumber":"1",
                      "type":"Mage"
                     },
+                 "rotation":0,
                  "type":"player1",
                  "visible":true,
                  "width":0,
@@ -147,6 +156,7 @@
     {
 
     },
+ "renderorder":"right-down",
  "tileheight":16,
  "tilesets":[
         {

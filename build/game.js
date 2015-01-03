@@ -1,3 +1,225 @@
+/// <reference path="references.ts" />
+var Timeline;
+(function (Timeline) {
+    // Has side effects. Will set unit.nextAttack to null
+    function dealDamage(unit) {
+        unit.nextAttack.target.health -= unit.DAMAGE;
+        if (unit.nextAttack.target.isDead()) {
+            Timeline.Display.drawDeath(unit.nextAttack.target);
+        }
+        unit.nextAttack = null;
+    }
+    Timeline.dealDamage = dealDamage;
+    function getLastMove(unit) {
+        return unit.nextMovePath.length > 0 ? unit.nextMovePath[unit.nextMovePath.length - 1] : unit;
+    }
+    Timeline.getLastMove = getLastMove;
+    function findNearbyEnemies(unit) {
+        var characters = Timeline.GameState.currentBoard.allCharacters;
+        var cell = getLastMove(unit);
+        var arr = [];
+        for (var i = 0; i < characters.length; i++) {
+            var c = characters[i];
+            if (!Timeline.isAlly(c) && isNear(cell, c, unit.RANGE) && isVisible(c))
+                arr.push(c);
+        }
+        return arr;
+    }
+    Timeline.findNearbyEnemies = findNearbyEnemies;
+    // Returns a path from the start to the end within the given space
+    function findPath(space, start, end) {
+        var openSet = [start];
+        var closedSet = [];
+        var cameFrom = {};
+        var gScore = {};
+        var fScore = {};
+        gScore[hashPoint(start)] = 0;
+        // for (var s in space){
+        //   gScore[hashPoint(space[s])] = Infinity;
+        // }
+        fScore[hashPoint(start)] = gScore[hashPoint(start)] + heuristicEstimate(start, end);
+        while (openSet.length > 0) {
+            var cur = openSet[0];
+            for (var i = 1; i < openSet.length; i++) {
+                if (fScore[hashPoint(openSet[i])] < fScore[hashPoint(cur)])
+                    cur = openSet[i];
+            }
+            // we've reached the end, we're all goods
+            if (comparePoints(cur, end)) {
+                return constructPath(cameFrom, end);
+            }
+            remove(openSet, cur, comparePoints);
+            closedSet.push(cur);
+            var allNeighbours = findNeighbours(space, cur);
+            for (var n in allNeighbours) {
+                var neighbour = allNeighbours[n];
+                if (contains(closedSet, neighbour, comparePoints))
+                    continue;
+                var tentativeGScore = gScore[hashPoint(cur)] + heuristicEstimate(cur, neighbour);
+                var neighbourHash = hashPoint(neighbour);
+                if (!contains(openSet, neighbour, comparePoints) || tentativeGScore < gScore[neighbourHash]) {
+                    cameFrom[neighbourHash] = cur;
+                    gScore[neighbourHash] = tentativeGScore;
+                    fScore[neighbourHash] = gScore[neighbourHash] + heuristicEstimate(neighbour, end);
+                    if (!contains(openSet, neighbour, comparePoints)) {
+                        openSet.push(neighbour);
+                    }
+                }
+            }
+        }
+        // We haven't reached the end, it's unreachable
+        // console.log("findPath: End is unreachable");
+        return [];
+    }
+    Timeline.findPath = findPath;
+    function findNeighbours(space, p) {
+        return [
+            { x: p.x + 1, y: p.y },
+            { x: p.x - 1, y: p.y },
+            { x: p.x, y: p.y + 1 },
+            { x: p.x, y: p.y - 1 },
+        ].filter(function (x) {
+            return contains(space, x, comparePoints);
+        });
+    }
+    Timeline.findNeighbours = findNeighbours;
+    function constructPath(cameFrom, end) {
+        var cur = end;
+        var path = [cur];
+        while (cameFrom[hashPoint(cur)] !== undefined) {
+            cur = cameFrom[hashPoint(cur)];
+            path.push(cur);
+        }
+        //remove the last (which is the person itself)
+        path.pop();
+        return path.reverse();
+    }
+    function heuristicEstimate(p1, p2) {
+        return Math.abs(p1.x - p2.x) + Math.abs(p1.y - p1.y);
+    }
+    function isNear(p1, p2, radius) {
+        radius = radius || 1;
+        var dx = Math.abs(p2.x - p1.x);
+        var dy = Math.abs(p2.y - p1.y);
+        return dx + dy <= radius;
+    }
+    Timeline.isNear = isNear;
+    function hashPoint(p) {
+        return "" + p.x + "." + p.y;
+    }
+    Timeline.hashPoint = hashPoint;
+    function comparePoints(p1, p2) {
+        return p1.x === p2.x && p1.y === p2.y;
+    }
+    Timeline.comparePoints = comparePoints;
+    function remove(arr, el, f) {
+        var max = arr.length;
+        var i = 0;
+        for (; i < max; i++) {
+            if (f(arr[i], el))
+                break;
+        }
+        arr.splice(i, 1);
+    }
+    Timeline.remove = remove;
+    function removeFrom(arr, el, f) {
+        var max = arr.length;
+        var i = 0;
+        for (; i < max; i++) {
+            if (f(arr[i], el))
+                break;
+        }
+        arr.splice(i, arr.length);
+    }
+    Timeline.removeFrom = removeFrom;
+    function contains(coll, el, f) {
+        return find(coll, el, f) !== null;
+    }
+    Timeline.contains = contains;
+    function find(coll, el, f) {
+        var max = coll.length;
+        for (var i = 0; i < max; ++i) {
+            if (f(coll[i], el)) {
+                return coll[i];
+            }
+        }
+        return null;
+    }
+    Timeline.find = find;
+    function focusOn(board) {
+        Timeline.GameState.currentBoard = board;
+        Timeline.Display.drawBoard(board);
+    }
+    Timeline.focusOn = focusOn;
+    function getMoveArea(center, max) {
+        var moveArea = [];
+        for (var i = 1; i <= max; i++) {
+            checkAddTile(moveArea, { x: center.x, y: center.y + i });
+            checkAddTile(moveArea, { x: center.x, y: center.y - i });
+            checkAddTile(moveArea, { x: center.x + i, y: center.y });
+            checkAddTile(moveArea, { x: center.x - i, y: center.y });
+            for (var j = 1; j <= max - i; j++) {
+                checkAddTile(moveArea, { x: center.x + i, y: center.y + j });
+                checkAddTile(moveArea, { x: center.x + i, y: center.y - j });
+                checkAddTile(moveArea, { x: center.x - i, y: center.y + j });
+                checkAddTile(moveArea, { x: center.x - i, y: center.y - j });
+            }
+        }
+        var tmp = [];
+        for (var i = 0; i < moveArea.length; i++) {
+            if (findPath(moveArea, center, moveArea[i]).length > 0)
+                tmp.push(moveArea[i]);
+        }
+        return tmp;
+    }
+    Timeline.getMoveArea = getMoveArea;
+    function checkAddTile(moveArea, tile) {
+        var prop1 = Timeline.GameState.propertyMap[hashPoint(tile)];
+        if (prop1 && prop1.collision)
+            return;
+        var c = Timeline.getUnitAt(tile);
+        if (c && !Timeline.isAlly(c) && isVisible(c))
+            return;
+        moveArea.push(tile);
+    }
+    function isVisible(point) {
+        var characters = Timeline.GameState.currentBoard.allCharacters;
+        for (var i = 0; i < characters.length; i++) {
+            var c = characters[i];
+            if (!Timeline.isAlly(c))
+                continue;
+            if (isNear(c, point, c.visionRange))
+                return true;
+        }
+        return false;
+    }
+    Timeline.isVisible = isVisible;
+    function createGameObjectFromLayer(layerName, map) {
+        var arr = map.objects[layerName];
+        var ret = [];
+        for (var i = 0; i < arr.length; i++) {
+            var character = new Timeline.UnitClasses[arr[i].properties.type](parseInt(arr[i].properties.teamNumber));
+            character.setPosition(~~(arr[i].x / Timeline.TILE_SIZE), ~~(arr[i].y / Timeline.TILE_SIZE) - 1);
+            ret.push(character);
+        }
+        return ret;
+    }
+    Timeline.createGameObjectFromLayer = createGameObjectFromLayer;
+    function partial(fn) {
+        var args = [];
+        for (var _i = 1; _i < arguments.length; _i++) {
+            args[_i - 1] = arguments[_i];
+        }
+        var slice = Array.prototype.slice;
+        var stored_args = slice.call(arguments, 1);
+        return function () {
+            var new_args = slice.call(arguments);
+            var args = stored_args.concat(new_args);
+            return fn.apply(null, args);
+        };
+    }
+    Timeline.partial = partial;
+})(Timeline || (Timeline = {}));
 var __extends = this.__extends || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
     function __() { this.constructor = d; }
@@ -9,7 +231,6 @@ var Timeline;
 (function (Timeline) {
     var Unit = (function () {
         function Unit(teamNumber) {
-            this.health = this.HEALTH;
             this.usedAP = 0;
             this.teamNumber = teamNumber;
             this.moveDistance = 0;
@@ -38,6 +259,9 @@ var Timeline;
         Unit.prototype.getType = function () {
             return this.constructor.toString().match(/function (\w*)/)[1];
         };
+        Unit.prototype.isDead = function () {
+            return this.health <= 0;
+        };
         return Unit;
     })();
     Timeline.Unit = Unit;
@@ -50,6 +274,7 @@ var Timeline;
             this.AP = 3;
             this.RANGE = 1;
             this.moveDistance = 5;
+            this.health = this.HEALTH;
         }
         return Warrior;
     })(Unit);
@@ -63,6 +288,7 @@ var Timeline;
             this.AP = 1;
             this.RANGE = 2;
             this.moveDistance = 2;
+            this.health = this.HEALTH;
         }
         return Mage;
     })(Unit);
@@ -76,6 +302,7 @@ var Timeline;
             this.AP = 2;
             this.RANGE = 3;
             this.moveDistance = 3;
+            this.health = this.HEALTH;
         }
         return Archer;
     })(Unit);
@@ -145,7 +372,7 @@ var Timeline;
             this.game.load.tilemap("test-map", "assets/maps/testmap.json", null, Phaser.Tilemap.TILED_JSON);
             this.game.load.image("test-tile-set", "assets/maps/test-tile-set.png");
             this.game.load.spritesheet("characters", "assets/maps/people.png", 16, 16, 50);
-            this.game.input.mouse.mouseWheelCallback = mouseWheelCallback.bind(this);
+            this.game.input.mouse.mouseWheelCallback = this.mouseWheelCallback.bind(this);
             this.game.input.onDown.add(this.onMouseDown, this);
             this.game.input.onUp.add(this.onMouseUp, this);
             this.moveArea = [];
@@ -184,16 +411,16 @@ var Timeline;
                             else if (!isNaN(props[key]))
                                 props[key] = parseInt(props[key]);
                         }
-                        Timeline.GameState.propertyMap[hashPoint({ x: i, y: j })] = tile.properties;
+                        Timeline.GameState.propertyMap[Timeline.hashPoint({ x: i, y: j })] = tile.properties;
                     }
                 }
             }
             console.log(Timeline.GameState.propertyMap);
-            var characters = createGameObjectFromLayer("Characters", map);
+            var characters = Timeline.createGameObjectFromLayer("Characters", map);
             var board = new Timeline.Board(characters);
             Timeline.GameState.boards.push(board);
             Timeline.Display.loadSpritesFromObjects(characters);
-            focusOn(board);
+            Timeline.focusOn(board);
             var newBoard = board.clone();
             Timeline.GameState.boards.push(newBoard);
             newBoard.allCharacters[0].x = 0;
@@ -201,7 +428,7 @@ var Timeline;
             newBoard.allCharacters[2].x = 5;
             newBoard.allCharacters[2].y = 5;
             Timeline.Display.loadSpritesFromObjects(newBoard.allCharacters);
-            focusOn(newBoard);
+            Timeline.focusOn(newBoard);
         };
         Play.prototype.update = function () {
         };
@@ -209,7 +436,7 @@ var Timeline;
             var newBoard = board.clone();
             Timeline.GameState.boards.push(newBoard);
             Timeline.Display.loadSpritesFromObjects(newBoard.allCharacters);
-            focusOn(newBoard);
+            Timeline.focusOn(newBoard);
         };
         Play.prototype.onMouseDown = function (mouse) {
             var characters = Timeline.GameState.currentBoard.allCharacters;
@@ -221,19 +448,19 @@ var Timeline;
             // clickedCell is a cell that contains a character
             // if not, we'll check if the user clicked on a movePath cell or a
             // moveArea cell to either add to the path, or remove from the path
-            var maybeCharacter = find(characters, clickedCell, comparePoints);
+            var maybeCharacter = Timeline.find(characters, clickedCell, Timeline.comparePoints);
             if (maybeCharacter && Timeline.isAlly(maybeCharacter) && !maybeCharacter.isMoving && maybeCharacter !== this.selectedUnit) {
                 this.selectedUnit = maybeCharacter;
                 console.log(maybeCharacter);
             }
             else if (this.selectedUnit) {
-                if (contains(this.selectedUnit.nextMovePath, clickedCell, comparePoints)) {
-                    removeFrom(this.selectedUnit.nextMovePath, clickedCell, comparePoints);
+                if (Timeline.contains(this.selectedUnit.nextMovePath, clickedCell, Timeline.comparePoints)) {
+                    Timeline.removeFrom(this.selectedUnit.nextMovePath, clickedCell, Timeline.comparePoints);
                 }
-                else if (contains(this.moveArea, clickedCell, comparePoints)) {
-                    var lastCellInPath = getLastMove(this.selectedUnit);
-                    if (!isNear(clickedCell, lastCellInPath)) {
-                        var tmp = findPath(this.moveArea, lastCellInPath, clickedCell);
+                else if (Timeline.contains(this.moveArea, clickedCell, Timeline.comparePoints)) {
+                    var lastCellInPath = Timeline.getLastMove(this.selectedUnit);
+                    if (!Timeline.isNear(clickedCell, lastCellInPath)) {
+                        var tmp = Timeline.findPath(this.moveArea, lastCellInPath, clickedCell);
                         this.selectedUnit.nextMovePath = this.selectedUnit.nextMovePath.concat(tmp.slice(0, this.selectedUnit.moveDistance - this.selectedUnit.nextMovePath.length));
                     }
                     else {
@@ -243,8 +470,8 @@ var Timeline;
                     }
                 }
                 else {
-                    var lastCellInPath = getLastMove(this.selectedUnit);
-                    if (maybeCharacter && !Timeline.isAlly(maybeCharacter) && isNear(maybeCharacter, lastCellInPath, this.selectedUnit.RANGE)) {
+                    var lastCellInPath = Timeline.getLastMove(this.selectedUnit);
+                    if (maybeCharacter && !Timeline.isAlly(maybeCharacter) && Timeline.isNear(maybeCharacter, lastCellInPath, this.selectedUnit.RANGE)) {
                         this.selectedUnit.nextAttack = { damage: this.selectedUnit.DAMAGE, target: maybeCharacter, trigger: lastCellInPath };
                         console.log("Will attack", this.selectedUnit.nextAttack);
                     }
@@ -260,8 +487,8 @@ var Timeline;
             var targetableEnemies = [];
             // If we selected a unit
             if (this.selectedUnit) {
-                this.moveArea = getMoveArea(this.selectedUnit.nextMovePath.length > 0 ? this.selectedUnit.nextMovePath[this.selectedUnit.nextMovePath.length - 1] : this.selectedUnit, this.selectedUnit.moveDistance - this.selectedUnit.nextMovePath.length);
-                targetableEnemies = findNearbyEnemies(this.selectedUnit);
+                this.moveArea = Timeline.getMoveArea(this.selectedUnit.nextMovePath.length > 0 ? this.selectedUnit.nextMovePath[this.selectedUnit.nextMovePath.length - 1] : this.selectedUnit, this.selectedUnit.moveDistance - this.selectedUnit.nextMovePath.length);
+                targetableEnemies = Timeline.findNearbyEnemies(this.selectedUnit);
             }
             Timeline.Display.drawMoveArea(this.moveArea);
             Timeline.Display.drawTargetableEnemies(targetableEnemies);
@@ -298,217 +525,21 @@ var Timeline;
             this.selectedUnit = null;
             this.moveArea = [];
         };
+        Play.prototype.mouseWheelCallback = function (event) {
+            event.preventDefault();
+            var curTime = Date.now();
+            if (curTime - this.prevTime < 600) {
+                return;
+            }
+            this.prevTime = curTime;
+            var delta = this.game.input.mouse.wheelDelta;
+            // console.log("delta:", delta);
+            Timeline.GameState.currentBoard = Timeline.GameState.boards[(Timeline.GameState.boards.indexOf(Timeline.GameState.currentBoard) + delta + Timeline.GameState.boards.length) % Timeline.GameState.boards.length];
+            Timeline.Display.drawBoard(Timeline.GameState.currentBoard);
+        };
         return Play;
     })(Phaser.State);
     Timeline.Play = Play;
-    function getLastMove(unit) {
-        return unit.nextMovePath.length > 0 ? unit.nextMovePath[unit.nextMovePath.length - 1] : unit;
-    }
-    Timeline.getLastMove = getLastMove;
-    function findNearbyEnemies(unit) {
-        var characters = Timeline.GameState.currentBoard.allCharacters;
-        var cell = getLastMove(unit);
-        var arr = [];
-        for (var i = 0; i < characters.length; i++) {
-            var c = characters[i];
-            if (!Timeline.isAlly(c) && isNear(cell, c, unit.RANGE) && isVisible(c))
-                arr.push(c);
-        }
-        return arr;
-    }
-    // Returns a path from the start to the end within the given space
-    function findPath(space, start, end) {
-        var openSet = [start];
-        var closedSet = [];
-        var cameFrom = {};
-        var gScore = {};
-        var fScore = {};
-        gScore[hashPoint(start)] = 0;
-        // for (var s in space){
-        //   gScore[hashPoint(space[s])] = Infinity;
-        // }
-        fScore[hashPoint(start)] = gScore[hashPoint(start)] + heuristicEstimate(start, end);
-        while (openSet.length > 0) {
-            var cur = openSet[0];
-            for (var i = 1; i < openSet.length; i++) {
-                if (fScore[hashPoint(openSet[i])] < fScore[hashPoint(cur)])
-                    cur = openSet[i];
-            }
-            // we've reached the end, we're all goods
-            if (comparePoints(cur, end)) {
-                return constructPath(cameFrom, end);
-            }
-            remove(openSet, cur, comparePoints);
-            closedSet.push(cur);
-            var allNeighbours = findNeighbours(space, cur);
-            for (var n in allNeighbours) {
-                var neighbour = allNeighbours[n];
-                if (contains(closedSet, neighbour, comparePoints))
-                    continue;
-                var tentativeGScore = gScore[hashPoint(cur)] + heuristicEstimate(cur, neighbour);
-                var neighbourHash = hashPoint(neighbour);
-                if (!contains(openSet, neighbour, comparePoints) || tentativeGScore < gScore[neighbourHash]) {
-                    cameFrom[neighbourHash] = cur;
-                    gScore[neighbourHash] = tentativeGScore;
-                    fScore[neighbourHash] = gScore[neighbourHash] + heuristicEstimate(neighbour, end);
-                    if (!contains(openSet, neighbour, comparePoints)) {
-                        openSet.push(neighbour);
-                    }
-                }
-            }
-        }
-        // We haven't reached the end, it's unreachable
-        // console.log("findPath: End is unreachable");
-        return [];
-    }
-    function findNeighbours(space, p) {
-        return [
-            { x: p.x + 1, y: p.y },
-            { x: p.x - 1, y: p.y },
-            { x: p.x, y: p.y + 1 },
-            { x: p.x, y: p.y - 1 },
-        ].filter(function (x) {
-            return contains(space, x, comparePoints);
-        });
-    }
-    function constructPath(cameFrom, end) {
-        var cur = end;
-        var path = [cur];
-        while (cameFrom[hashPoint(cur)] !== undefined) {
-            cur = cameFrom[hashPoint(cur)];
-            path.push(cur);
-        }
-        //remove the last (which is the person itself)
-        path.pop();
-        return path.reverse();
-    }
-    function heuristicEstimate(p1, p2) {
-        return Math.abs(p1.x - p2.x) + Math.abs(p1.y - p1.y);
-    }
-    function isNear(p1, p2, radius) {
-        radius = radius || 1;
-        var dx = Math.abs(p2.x - p1.x);
-        var dy = Math.abs(p2.y - p1.y);
-        return dx + dy <= radius;
-    }
-    function hashPoint(p) {
-        return "" + p.x + "." + p.y;
-    }
-    function comparePoints(p1, p2) {
-        return p1.x === p2.x && p1.y === p2.y;
-    }
-    Timeline.comparePoints = comparePoints;
-    function remove(arr, el, f) {
-        var max = arr.length;
-        var i = 0;
-        for (; i < max; i++) {
-            if (f(arr[i], el))
-                break;
-        }
-        arr.splice(i, 1);
-    }
-    function removeFrom(arr, el, f) {
-        var max = arr.length;
-        var i = 0;
-        for (; i < max; i++) {
-            if (f(arr[i], el))
-                break;
-        }
-        arr.splice(i, arr.length);
-    }
-    function contains(coll, el, f) {
-        return find(coll, el, f) !== null;
-    }
-    function find(coll, el, f) {
-        var max = coll.length;
-        for (var i = 0; i < max; ++i) {
-            if (f(coll[i], el)) {
-                return coll[i];
-            }
-        }
-        return null;
-    }
-    function focusOn(board) {
-        Timeline.GameState.currentBoard = board;
-        Timeline.Display.drawBoard(board);
-    }
-    function getMoveArea(center, max) {
-        var moveArea = [];
-        for (var i = 1; i <= max; i++) {
-            checkAddTile(moveArea, { x: center.x, y: center.y + i });
-            checkAddTile(moveArea, { x: center.x, y: center.y - i });
-            checkAddTile(moveArea, { x: center.x + i, y: center.y });
-            checkAddTile(moveArea, { x: center.x - i, y: center.y });
-            for (var j = 1; j <= max - i; j++) {
-                checkAddTile(moveArea, { x: center.x + i, y: center.y + j });
-                checkAddTile(moveArea, { x: center.x + i, y: center.y - j });
-                checkAddTile(moveArea, { x: center.x - i, y: center.y + j });
-                checkAddTile(moveArea, { x: center.x - i, y: center.y - j });
-            }
-        }
-        var tmp = [];
-        for (var i = 0; i < moveArea.length; i++) {
-            if (findPath(moveArea, center, moveArea[i]).length > 0)
-                tmp.push(moveArea[i]);
-        }
-        return tmp;
-    }
-    function checkAddTile(moveArea, tile) {
-        var prop1 = Timeline.GameState.propertyMap[hashPoint(tile)];
-        if (prop1 && prop1.collision)
-            return;
-        var c = Timeline.getUnitAt(tile);
-        if (c && !Timeline.isAlly(c) && isVisible(c))
-            return;
-        moveArea.push(tile);
-    }
-    function isVisible(point) {
-        var characters = Timeline.GameState.currentBoard.allCharacters;
-        for (var i = 0; i < characters.length; i++) {
-            var c = characters[i];
-            if (!Timeline.isAlly(c))
-                continue;
-            if (isNear(c, point, c.visionRange))
-                return true;
-        }
-        return false;
-    }
-    Timeline.isVisible = isVisible;
-    function mouseWheelCallback(event) {
-        event.preventDefault();
-        var curTime = Date.now();
-        if (curTime - this.prevTime < 600) {
-            return;
-        }
-        this.prevTime = curTime;
-        var delta = this.game.input.mouse.wheelDelta;
-        // console.log("delta:", delta);
-        Timeline.GameState.currentBoard = Timeline.GameState.boards[(Timeline.GameState.boards.indexOf(Timeline.GameState.currentBoard) + delta + Timeline.GameState.boards.length) % Timeline.GameState.boards.length];
-        Timeline.Display.drawBoard(Timeline.GameState.currentBoard);
-    }
-    function createGameObjectFromLayer(layerName, map) {
-        var arr = map.objects[layerName];
-        var ret = [];
-        for (var i = 0; i < arr.length; i++) {
-            var character = new Timeline.UnitClasses[arr[i].properties.type](parseInt(arr[i].properties.teamNumber));
-            character.setPosition(~~(arr[i].x / Timeline.TILE_SIZE), ~~(arr[i].y / Timeline.TILE_SIZE) - 1);
-            ret.push(character);
-        }
-        return ret;
-    }
-    function partial(fn) {
-        var args = [];
-        for (var _i = 1; _i < arguments.length; _i++) {
-            args[_i - 1] = arguments[_i];
-        }
-        var slice = Array.prototype.slice;
-        var stored_args = slice.call(arguments, 1);
-        return function () {
-            var new_args = slice.call(arguments);
-            var args = stored_args.concat(new_args);
-            return fn.apply(null, args);
-        };
-    }
 })(Timeline || (Timeline = {}));
 /// <reference path="references.ts" />
 var Timeline;
@@ -598,11 +629,10 @@ var Timeline;
             });
         }
         Display.loadSpritesFromObjects = loadSpritesFromObjects;
-        function moveObject(unit, name) {
-            var sprite = getFromMap(spriteMap, unit);
-            sprite.play(name);
-        }
-        Display.moveObject = moveObject;
+        // export function moveObject(unit: Unit, name: string) {
+        //   var sprite = getFromMap(spriteMap, unit);
+        //   sprite.play(name);
+        // }
         function drawBoard(board) {
             moveArea.clear();
             for (var i = 0; i < spriteMap.length; i++) {
@@ -627,6 +657,8 @@ var Timeline;
             fogOfWar.beginFill(0x000000);
             var characters = Timeline.GameState.currentBoard.allCharacters;
             for (var k = 0; k < characters.length; k++) {
+                if (characters[k].isDead())
+                    continue;
                 var sprite = getFromMap(spriteMap, characters[k]);
                 sprite.exists = false;
             }
@@ -724,27 +756,32 @@ var Timeline;
             };
             tween.to(clonedDest, 400, Phaser.Easing.Exponential.In, true);
             tween.onComplete.add(function () {
-                var emitter = game.add.emitter((unit.nextAttack.target.x + 0.5) * Timeline.TILE_SIZE * Timeline.SCALE, (unit.nextAttack.target.y + 0.5) * Timeline.TILE_SIZE * Timeline.SCALE, unit.nextAttack.damage);
-                emitter.makeParticles('-1');
-                emitter.setYSpeed(-100, -200);
-                emitter.setXSpeed(-75, 75);
-                emitter.setRotation(0, 0);
-                emitter.gravity = 500;
-                emitter.setAlpha(1, 0, 1000, Phaser.Easing.Exponential.In);
-                emitter.start(true, 700, null, unit.nextAttack.damage);
-                //emitter.update();
+                drawDamage(unit);
+                Timeline.dealDamage(unit);
                 var tween2 = game.add.tween(sprite.position);
                 var clonedDest2 = {
                     x: unit.x * Timeline.TILE_SIZE * Timeline.SCALE,
                     y: unit.y * Timeline.TILE_SIZE * Timeline.SCALE
                 };
                 tween2.to(clonedDest2, 400, Phaser.Easing.Exponential.Out, true);
-                tween2.onComplete.add(function () {
-                    unit.nextAttack = null;
-                    callback();
-                }, this);
+                tween2.onComplete.add(callback, this);
             }, this);
         }
+        function drawDamage(unit) {
+            var emitter = game.add.emitter((unit.nextAttack.target.x + 0.5) * Timeline.TILE_SIZE * Timeline.SCALE, (unit.nextAttack.target.y + 0.5) * Timeline.TILE_SIZE * Timeline.SCALE, unit.nextAttack.damage);
+            emitter.makeParticles('-1');
+            emitter.setYSpeed(-100, -200);
+            emitter.setXSpeed(-75, 75);
+            emitter.setRotation(0, 0);
+            emitter.gravity = 500;
+            emitter.setAlpha(1, 0, 1000, Phaser.Easing.Exponential.In);
+            emitter.start(true, 700, null, unit.nextAttack.damage);
+        }
+        function drawDeath(unit) {
+            getFromMap(spriteMap, unit).kill();
+            removeFromMap(spriteMap, unit);
+        }
+        Display.drawDeath = drawDeath;
         function drawTargetableEnemies(nearbyEnemies) {
             moveArea.beginFill(0xff0000);
             for (var i = 0; i < nearbyEnemies.length; i++) {
@@ -806,6 +843,19 @@ var Timeline;
                 }
             }
             return null;
+        }
+        function removeFromMap(map, key) {
+            var flag = false;
+            for (var i = 0; i < map.length; i++) {
+                if (map[i].key === key) {
+                    flag = true;
+                    continue;
+                }
+                if (flag) {
+                    map[i - 1] = map[i];
+                }
+            }
+            map.length -= 1;
         }
         function pushInMap(map, key, val) {
             for (var i = 0; i < map.length; i++) {
