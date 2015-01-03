@@ -524,7 +524,7 @@ var Timeline;
             var characters = Timeline.GameState.currentBoard.allCharacters;
             var max = characters.length;
             for (var i = 0; i < max; i++) {
-                if (!characters[i].isMoving && characters[i].nextMovePath.length > 0) {
+                if (!characters[i].isMoving) {
                     characters[i].isMoving = true;
                     // Remove the empty callback when figured out the optional type
                     // in TS
@@ -703,8 +703,6 @@ var Timeline;
         }
         Display.drawMoveArea = drawMoveArea;
         function drawMovePath(unit) {
-            if (!unit)
-                return;
             var path = unit.nextMovePath;
             var movePath = getFromMap(movePathMap, unit);
             movePath.clear();
@@ -713,14 +711,13 @@ var Timeline;
             movePath.beginFill(0x00ff33);
             movePath.alpha = 0.5;
             for (var i = 0; i < path.length; i++) {
-                var square = path[i];
-                movePath.drawRect(square.x * Timeline.TILE_SIZE * Timeline.SCALE, square.y * Timeline.TILE_SIZE * Timeline.SCALE, Timeline.TILE_SIZE * Timeline.SCALE, Timeline.TILE_SIZE * Timeline.SCALE);
+                movePath.drawRect(path[i].x * Timeline.TILE_SIZE * Timeline.SCALE, path[i].y * Timeline.TILE_SIZE * Timeline.SCALE, Timeline.TILE_SIZE * Timeline.SCALE, Timeline.TILE_SIZE * Timeline.SCALE);
             }
             movePath.endFill();
             if (unit.nextAttack) {
                 movePath.lineStyle(5, 0xff0000, 1);
-                movePath.moveTo((unit.nextAttack.trigger.x * Timeline.TILE_SIZE + Timeline.TILE_SIZE / 2) * Timeline.SCALE, (unit.nextAttack.trigger.y * Timeline.TILE_SIZE + Timeline.TILE_SIZE / 2) * Timeline.SCALE);
-                movePath.lineTo((unit.nextAttack.target.x * Timeline.TILE_SIZE + Timeline.TILE_SIZE / 2) * Timeline.SCALE, (unit.nextAttack.target.y * Timeline.TILE_SIZE + Timeline.TILE_SIZE / 2) * Timeline.SCALE);
+                movePath.moveTo((unit.nextAttack.trigger.x + 0.5) * Timeline.TILE_SIZE * Timeline.SCALE, (unit.nextAttack.trigger.y + 0.5) * Timeline.TILE_SIZE * Timeline.SCALE);
+                movePath.lineTo((unit.nextAttack.target.x + 0.5) * Timeline.TILE_SIZE * Timeline.SCALE, (unit.nextAttack.target.y + 0.5) * Timeline.TILE_SIZE * Timeline.SCALE);
             }
         }
         Display.drawMovePath = drawMovePath;
@@ -788,6 +785,7 @@ var Timeline;
                 tween2.onComplete.add(callback, this);
             }, this);
         }
+        Display.drawAttack = drawAttack;
         function drawDamage(unit) {
             var dmg = unit.nextAttack.damage;
             for (var i = 100; i >= 1; i /= 10) {
@@ -807,7 +805,7 @@ var Timeline;
         function configureEmitter(emitter, mag, num) {
             var scale = mag.toString().length - 1;
             emitter.makeParticles((-1 * mag).toString());
-            emitter.setYSpeed(-100 - (100 * scale), -200 - (100 * scale));
+            emitter.setYSpeed(-50 - (100 * scale), -100 - (100 * scale));
             emitter.setXSpeed(-75 - (scale * 50), 75 + (scale * 50));
             emitter.setRotation(0, 0);
             emitter.gravity = 400;

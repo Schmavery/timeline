@@ -121,7 +121,6 @@ module Timeline {
     }
 
     export function drawMovePath(unit: Unit) {
-      if(!unit) return;
       var path = unit.nextMovePath;
       var movePath = getFromMap(movePathMap, unit);
       movePath.clear();
@@ -132,17 +131,15 @@ module Timeline {
       movePath.alpha = 0.5;
 
       for (var i = 0; i < path.length; i++) {
-        var square = path[i];
-
-        movePath.drawRect(square.x * TILE_SIZE * SCALE, square.y * TILE_SIZE * SCALE, TILE_SIZE * SCALE, TILE_SIZE * SCALE);
+        movePath.drawRect(path[i].x * TILE_SIZE * SCALE, path[i].y * TILE_SIZE * SCALE, TILE_SIZE * SCALE, TILE_SIZE * SCALE);
       }
 
       movePath.endFill();
 
       if(unit.nextAttack) {
         movePath.lineStyle(5, 0xff0000, 1);
-        movePath.moveTo((unit.nextAttack.trigger.x * TILE_SIZE + TILE_SIZE / 2) * SCALE, (unit.nextAttack.trigger.y * TILE_SIZE + TILE_SIZE / 2) * SCALE);
-        movePath.lineTo((unit.nextAttack.target.x * TILE_SIZE + TILE_SIZE / 2) * SCALE, (unit.nextAttack.target.y * TILE_SIZE + TILE_SIZE / 2) * SCALE);
+        movePath.moveTo((unit.nextAttack.trigger.x + 0.5) * TILE_SIZE * SCALE, (unit.nextAttack.trigger.y + 0.5) * TILE_SIZE * SCALE);
+        movePath.lineTo((unit.nextAttack.target.x + 0.5) * TILE_SIZE * SCALE, (unit.nextAttack.target.y + 0.5) * TILE_SIZE * SCALE);
       }
     }
 
@@ -151,6 +148,9 @@ module Timeline {
       getFromMap(movePathMap, unit).clear();
       var path = unit.nextMovePath;
 
+      // We explore the path ahead of time and truncate it if there's an
+      // enemy on it. The moving character will stop at a distance of RANGE
+      // from the first encountered enemy
       for(var i = 0; i < path.length; i++) {
         var c = getUnitAt(path[i]);
         if(c && !isAlly(c)) {
@@ -191,7 +191,7 @@ module Timeline {
       }
     }
 
-    function drawAttack(unit: Unit, callback) {
+    export function drawAttack(unit: Unit, callback) {
       var sprite = getFromMap(spriteMap, unit);
       var tween = game.add.tween(sprite.position);
       var clonedDest = {
@@ -233,7 +233,7 @@ module Timeline {
     function configureEmitter(emitter, mag : number, num : number) {
       var scale = mag.toString().length - 1;
       emitter.makeParticles((-1*mag).toString());
-      emitter.setYSpeed(-100-(100*scale),-200-(100*scale));
+      emitter.setYSpeed(-50-(100*scale),-100-(100*scale));
       emitter.setXSpeed(-75-(scale*50),75+(scale*50));
       emitter.setRotation(0,0);
       emitter.gravity = 400;

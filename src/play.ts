@@ -149,6 +149,7 @@ module Timeline {
         this.moveArea = getMoveArea(this.selectedUnit.nextMovePath.length > 0 ? this.selectedUnit.nextMovePath[this.selectedUnit.nextMovePath.length - 1] : this.selectedUnit, this.selectedUnit.moveDistance - this.selectedUnit.nextMovePath.length);
         targetableEnemies = findNearbyEnemies(this.selectedUnit);
       }
+
       Display.drawMoveArea(this.moveArea);
       Display.drawTargetableEnemies(targetableEnemies);
       Display.drawMovePath(this.selectedUnit);
@@ -174,7 +175,7 @@ module Timeline {
       var characters = GameState.currentBoard.allCharacters;
       var max = characters.length;
       for (var i = 0; i < max; i++) {
-        if(!characters[i].isMoving && characters[i].nextMovePath.length > 0) {
+        if(!characters[i].isMoving) {
           characters[i].isMoving = true;
           // Remove the empty callback when figured out the optional type
           // in TS
