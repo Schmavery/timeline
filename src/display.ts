@@ -45,10 +45,10 @@ module Timeline {
       });
     }
 
-    export function moveObject(unit: Unit, name: string) {
-      var sprite = getFromMap(spriteMap, unit);
-      sprite.play(name);
-    }
+    // export function moveObject(unit: Unit, name: string) {
+    //   var sprite = getFromMap(spriteMap, unit);
+    //   sprite.play(name);
+    // }
 
     export function drawBoard(board: Board) {
       moveArea.clear();
@@ -86,6 +86,8 @@ module Timeline {
       fogOfWar.beginFill(0x000000);
       var characters = GameState.currentBoard.allCharacters;
       for(var k = 0; k < characters.length; k++) {
+        if(characters[k].isDead()) continue;
+
         var sprite = getFromMap(spriteMap, characters[k]);
         sprite.exists = false;
       }
@@ -178,7 +180,15 @@ module Timeline {
           loop(arr, j+1);
         });
       };
-      loop(path, 0);
+
+      if(unit.nextAttack && comparePoints(unit.nextAttack.trigger, unit)) {
+        console.log("Attacking", unit.nextAttack);
+        drawAttack(unit, () => {
+          loop(path, 0);
+        });
+      } else {
+        loop(path, 0);
+      }
     }
 
     function drawAttack(unit: Unit, callback) {
@@ -190,7 +200,20 @@ module Timeline {
       }
       tween.to(clonedDest, 400, Phaser.Easing.Exponential.In, true);
       tween.onComplete.add(function() {
+        drawDamage(unit);
+        dealDamage(unit);
 
+        var tween2 = game.add.tween(sprite.position);
+        var clonedDest2 = {
+          x: unit.x * TILE_SIZE * SCALE,
+          y: unit.y * TILE_SIZE * SCALE
+        }
+        tween2.to(clonedDest2, 400, Phaser.Easing.Exponential.Out, true);
+        tween2.onComplete.add(callback, this);
+      }, this);
+    }
+
+    function drawDamage(unit: Unit) {
         var dmg = unit.nextAttack.damage;
         for(var i = 100; i >= 1; i /= 10){
           var num = ~~(dmg / i);
@@ -200,18 +223,11 @@ module Timeline {
             (unit.nextAttack.target.y + 0.5) * TILE_SIZE * SCALE, num);
           configureEmitter(emit, i, num);
         }
+    }
 
-        var tween2 = game.add.tween(sprite.position);
-        var clonedDest2 = {
-          x: unit.x * TILE_SIZE * SCALE,
-          y: unit.y * TILE_SIZE * SCALE
-        }
-        tween2.to(clonedDest2, 400, Phaser.Easing.Exponential.Out, true);
-        tween2.onComplete.add(function() {
-          unit.nextAttack = null;
-          callback();
-        }, this);
-      }, this);
+    export function drawDeath(unit: Unit) {
+      getFromMap(spriteMap, unit).kill();
+      removeFromMap(spriteMap, unit);
     }
 
     function configureEmitter(emitter, mag : number, num : number) {
@@ -220,10 +236,10 @@ module Timeline {
       emitter.setYSpeed(-100-(100*scale),-200-(100*scale));
       emitter.setXSpeed(-75-(scale*50),75+(scale*50));
       emitter.setRotation(0,0);
-      emitter.gravity = 500;
+      emitter.gravity = 400;
       emitter.setScale(0.75,0.751,0.75,0.751,0);
-      emitter.setAlpha(1, 0, 1000+(scale*700), Phaser.Easing.Exponential.In);
-      emitter.start(true, 700+(scale*700), null, num);
+      emitter.setAlpha(1, 0, 1200+(scale*700), Phaser.Easing.Exponential.In);
+      emitter.start(true, 1000+(scale*700), null, num);
     }
 
     export function drawTargetableEnemies(nearbyEnemies: Point[]) {
@@ -290,6 +306,20 @@ module Timeline {
       }
 
       return null;
+    }
+
+    function removeFromMap(map, key) {
+      var flag = false;
+      for (var i = 0; i < map.length; i++){
+        if(map[i].key === key) {
+          flag = true;
+          continue;
+        }
+        if(flag) {
+          map[i-1] = map[i];
+        }
+      }
+      map.length -= 1;
     }
 
     function pushInMap(map, key, val) {

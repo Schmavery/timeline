@@ -25,7 +25,6 @@ module Timeline {
     RANGE: number;
 
     constructor(teamNumber: number) {
-      this.health = this.HEALTH;
       this.usedAP = 0;
       this.teamNumber = teamNumber;
       this.moveDistance = 0;
@@ -58,6 +57,10 @@ module Timeline {
     getType() {
       return this.constructor.toString().match(/function (\w*)/)[1];
     }
+
+    isDead() {
+      return this.health <= 0;
+    }
   }
 
   export class Warrior extends Unit {
@@ -68,6 +71,7 @@ module Timeline {
     constructor(teamNumber: number){
       super(teamNumber);
       this.moveDistance = 5;
+      this.health = this.HEALTH;
     }
   }
 
@@ -79,6 +83,7 @@ module Timeline {
     constructor(teamNumber: number){
       super(teamNumber);
       this.moveDistance = 2;
+      this.health = this.HEALTH;
     }
   }
 
@@ -90,6 +95,7 @@ module Timeline {
     constructor(teamNumber: number){
       super(teamNumber);
       this.moveDistance = 3;
+      this.health = this.HEALTH;
     }
   }
 
