@@ -112,7 +112,10 @@ module Timeline {
         console.log(maybeCharacter);
       } else if(this.selectedUnit) {
         if(contains(this.selectedUnit.nextMovePath, clickedCell, comparePoints)) {
-          removeFrom(this.selectedUnit.nextMovePath, clickedCell, comparePoints);
+          var removedCells = removeFrom(this.selectedUnit.nextMovePath, clickedCell, comparePoints);
+          if(this.selectedUnit.nextAttack && contains(removedCells, this.selectedUnit.nextAttack.trigger, comparePoints)) {
+            this.selectedUnit.nextAttack = null;
+          }
         } else if(contains(this.moveArea, clickedCell, comparePoints)) {
           var lastCellInPath = getLastMove(this.selectedUnit);
 

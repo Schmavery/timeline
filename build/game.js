@@ -1,34 +1,6 @@
 /// <reference path="references.ts" />
 var Timeline;
 (function (Timeline) {
-    // Has side effects. Will set unit.nextAttack to null
-    function dealDamage(unit) {
-        unit.nextAttack.target.health -= unit.DAMAGE;
-        if (unit.nextAttack.target.isDead()) {
-            Timeline.Display.drawDeath(unit.nextAttack.target);
-            Timeline.GameState.currentBoard.deadCharacters.push(unit.nextAttack.target);
-            var index = Timeline.GameState.currentBoard.allCharacters.indexOf(unit.nextAttack.target);
-            Timeline.GameState.currentBoard.allCharacters.splice(index, 1);
-        }
-        unit.nextAttack = null;
-    }
-    Timeline.dealDamage = dealDamage;
-    function getLastMove(unit) {
-        return unit.nextMovePath.length > 0 ? unit.nextMovePath[unit.nextMovePath.length - 1] : unit;
-    }
-    Timeline.getLastMove = getLastMove;
-    function findNearbyEnemies(unit) {
-        var characters = Timeline.GameState.currentBoard.allCharacters;
-        var cell = getLastMove(unit);
-        var arr = [];
-        for (var i = 0; i < characters.length; i++) {
-            var c = characters[i];
-            if (!Timeline.isAlly(c) && isNear(cell, c, unit.RANGE) && isVisible(c))
-                arr.push(c);
-        }
-        return arr;
-    }
-    Timeline.findNearbyEnemies = findNearbyEnemies;
     // Returns a path from the start to the end within the given space
     function findPath(space, start, end) {
         var openSet = [start];
@@ -132,7 +104,7 @@ var Timeline;
             if (f(arr[i], el))
                 break;
         }
-        arr.splice(i, arr.length);
+        return arr.splice(i, arr.length);
     }
     Timeline.removeFrom = removeFrom;
     function contains(coll, el, f) {
@@ -149,6 +121,52 @@ var Timeline;
         return null;
     }
     Timeline.find = find;
+    function partial(fn) {
+        var args = [];
+        for (var _i = 1; _i < arguments.length; _i++) {
+            args[_i - 1] = arguments[_i];
+        }
+        var slice = Array.prototype.slice;
+        var stored_args = slice.call(arguments, 1);
+        return function () {
+            var new_args = slice.call(arguments);
+            var args = stored_args.concat(new_args);
+            return fn.apply(null, args);
+        };
+    }
+    Timeline.partial = partial;
+})(Timeline || (Timeline = {}));
+/// <reference path="references.ts" />
+var Timeline;
+(function (Timeline) {
+    // Has side effects. Will set unit.nextAttack to null
+    function dealDamage(unit) {
+        unit.nextAttack.target.health -= unit.DAMAGE;
+        if (unit.nextAttack.target.isDead()) {
+            Timeline.Display.drawDeath(unit.nextAttack.target);
+            Timeline.GameState.currentBoard.deadCharacters.push(unit.nextAttack.target);
+            var index = Timeline.GameState.currentBoard.allCharacters.indexOf(unit.nextAttack.target);
+            Timeline.GameState.currentBoard.allCharacters.splice(index, 1);
+        }
+        unit.nextAttack = null;
+    }
+    Timeline.dealDamage = dealDamage;
+    function getLastMove(unit) {
+        return unit.nextMovePath.length > 0 ? unit.nextMovePath[unit.nextMovePath.length - 1] : unit;
+    }
+    Timeline.getLastMove = getLastMove;
+    function findNearbyEnemies(unit) {
+        var characters = Timeline.GameState.currentBoard.allCharacters;
+        var cell = getLastMove(unit);
+        var arr = [];
+        for (var i = 0; i < characters.length; i++) {
+            var c = characters[i];
+            if (!Timeline.isAlly(c) && Timeline.isNear(cell, c, unit.RANGE) && isVisible(c))
+                arr.push(c);
+        }
+        return arr;
+    }
+    Timeline.findNearbyEnemies = findNearbyEnemies;
     function focusOn(board) {
         Timeline.GameState.currentBoard = board;
         Timeline.Display.drawBoard(board);
@@ -170,14 +188,14 @@ var Timeline;
         }
         var tmp = [];
         for (var i = 0; i < moveArea.length; i++) {
-            if (findPath(moveArea, center, moveArea[i]).length > 0)
+            if (Timeline.findPath(moveArea, center, moveArea[i]).length > 0)
                 tmp.push(moveArea[i]);
         }
         return tmp;
     }
     Timeline.getMoveArea = getMoveArea;
     function checkAddTile(moveArea, tile) {
-        var prop1 = Timeline.GameState.propertyMap[hashPoint(tile)];
+        var prop1 = Timeline.GameState.propertyMap[Timeline.hashPoint(tile)];
         if (prop1 && prop1.collision)
             return;
         var c = Timeline.getUnitAt(tile);
@@ -191,7 +209,7 @@ var Timeline;
             var c = characters[i];
             if (!Timeline.isAlly(c))
                 continue;
-            if (isNear(c, point, c.visionRange))
+            if (Timeline.isNear(c, point, c.visionRange))
                 return true;
         }
         return false;
@@ -208,20 +226,6 @@ var Timeline;
         return ret;
     }
     Timeline.createGameObjectFromLayer = createGameObjectFromLayer;
-    function partial(fn) {
-        var args = [];
-        for (var _i = 1; _i < arguments.length; _i++) {
-            args[_i - 1] = arguments[_i];
-        }
-        var slice = Array.prototype.slice;
-        var stored_args = slice.call(arguments, 1);
-        return function () {
-            var new_args = slice.call(arguments);
-            var args = stored_args.concat(new_args);
-            return fn.apply(null, args);
-        };
-    }
-    Timeline.partial = partial;
 })(Timeline || (Timeline = {}));
 var __extends = this.__extends || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
@@ -461,7 +465,10 @@ var Timeline;
             }
             else if (this.selectedUnit) {
                 if (Timeline.contains(this.selectedUnit.nextMovePath, clickedCell, Timeline.comparePoints)) {
-                    Timeline.removeFrom(this.selectedUnit.nextMovePath, clickedCell, Timeline.comparePoints);
+                    var removedCells = Timeline.removeFrom(this.selectedUnit.nextMovePath, clickedCell, Timeline.comparePoints);
+                    if (this.selectedUnit.nextAttack && Timeline.contains(removedCells, this.selectedUnit.nextAttack.trigger, Timeline.comparePoints)) {
+                        this.selectedUnit.nextAttack = null;
+                    }
                 }
                 else if (Timeline.contains(this.moveArea, clickedCell, Timeline.comparePoints)) {
                     var lastCellInPath = Timeline.getLastMove(this.selectedUnit);

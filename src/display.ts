@@ -298,7 +298,7 @@ module Timeline {
       }, this);
     }
 
-    function getFromMap(map, key) {
+    function getFromMap(map: {key: any; val: any}[], key) {
       for (var i = 0; i < map.length; i++){
         if(map[i].key === key) {
           return map[i].val;
@@ -308,7 +308,7 @@ module Timeline {
       return null;
     }
 
-    function removeFromMap(map, key) {
+    function removeFromMap(map: {key: any; val: any}[], key) {
       var flag = false;
       for (var i = 0; i < map.length; i++){
         if(map[i].key === key) {
@@ -322,7 +322,7 @@ module Timeline {
       map.length -= 1;
     }
 
-    function pushInMap(map, key, val) {
+    function pushInMap(map: {key: any; val: any}[], key, val) {
       for (var i = 0; i < map.length; i++){
         if(map[i].key === key) {
           map[i].val = val;
