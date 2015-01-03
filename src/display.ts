@@ -197,8 +197,8 @@ module Timeline {
           dmg %= i;
           if (num === 0) continue;
           var emit = game.add.emitter((unit.nextAttack.target.x + 0.5) * TILE_SIZE * SCALE,
-            (unit.nextAttack.target.y + 0.5) * TILE_SIZE * SCALE, unit.nextAttack.damage);
-          configureEmitter(emit, (-1*i).toString(), num);
+            (unit.nextAttack.target.y + 0.5) * TILE_SIZE * SCALE, num);
+          configureEmitter(emit, i, num);
         }
 
         var tween2 = game.add.tween(sprite.position);
@@ -214,15 +214,16 @@ module Timeline {
       }, this);
     }
 
-    function configureEmitter(emitter, sprite : string, num : number) {
-      emitter.makeParticles(sprite);
-      emitter.setYSpeed(-100,-200);
-      emitter.setXSpeed(-75,75);
+    function configureEmitter(emitter, mag : number, num : number) {
+      var scale = mag.toString().length - 1;
+      emitter.makeParticles((-1*mag).toString());
+      emitter.setYSpeed(-100-(100*scale),-200-(100*scale));
+      emitter.setXSpeed(-75-(scale*50),75+(scale*50));
       emitter.setRotation(0,0);
       emitter.gravity = 500;
       emitter.setScale(0.75,0.751,0.75,0.751,0);
-      emitter.setAlpha(1, 0, 1200, Phaser.Easing.Exponential.In);
-      emitter.start(true, 1000, null, num);
+      emitter.setAlpha(1, 0, 1000+(scale*700), Phaser.Easing.Exponential.In);
+      emitter.start(true, 700+(scale*700), null, num);
     }
 
     export function drawTargetableEnemies(nearbyEnemies: Point[]) {
