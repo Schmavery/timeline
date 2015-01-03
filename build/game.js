@@ -398,17 +398,15 @@ var Timeline;
             var sprite = this.game.add.sprite(340 * Timeline.SCALE, 50 * Timeline.SCALE, "menu-btn");
             sprite.inputEnabled = true;
             sprite.events.onInputDown.add(this.playTurn.bind(this), this);
-            var map = this.game.add.tilemap("test-map");
-            this.layer = map.createLayer("Tile Layer 1");
-            map.addTilesetImage("testset", "test-tile-set");
+            this.map = this.game.add.tilemap("test-map");
+            this.layer = this.map.createLayer("Tile Layer 1");
+            this.map.addTilesetImage("testset", "test-tile-set");
             this.layer.scale.set(Timeline.SCALE);
             // Init the display
-            Timeline.Display.init(this.game, map);
-            //console.log(this.layer);
-            var tileset = map.tilesets[map.getTilesetIndex('testset')];
-            for (var i = 0; i < map.width; i++) {
-                for (var j = 0; j < map.height; j++) {
-                    var tile = map.getTile(i, j, "Tile Layer 1");
+            Timeline.Display.init(this.game, this.map);
+            for (var i = 0; i < this.map.width; i++) {
+                for (var j = 0; j < this.map.height; j++) {
+                    var tile = this.map.getTile(i, j, "Tile Layer 1");
                     var props = tile.properties;
                     if (Object.keys(props).length !== 0) {
                         for (var key in props) {
@@ -426,7 +424,7 @@ var Timeline;
                 }
             }
             console.log(Timeline.GameState.propertyMap);
-            var characters = Timeline.createGameObjectFromLayer("Characters", map);
+            var characters = Timeline.createGameObjectFromLayer("Characters", this.map);
             var board = new Timeline.Board(characters);
             Timeline.GameState.boards.push(board);
             Timeline.Display.loadSpritesFromObjects(characters);
@@ -449,6 +447,9 @@ var Timeline;
             Timeline.focusOn(newBoard);
         };
         Play.prototype.onMouseDown = function (mouse) {
+            // Exit if we clicked outside the bounds of the board.
+            if (mouse.x > this.map.widthInPixels * Timeline.SCALE || mouse.y > this.map.heightInPixels * Timeline.SCALE)
+                return;
             var characters = Timeline.GameState.currentBoard.allCharacters;
             var clickedCell = {
                 x: ~~(mouse.x / (Timeline.SCALE * Timeline.TILE_SIZE)),
@@ -505,7 +506,8 @@ var Timeline;
             }
             Timeline.Display.drawMoveArea(this.moveArea);
             Timeline.Display.drawTargetableEnemies(targetableEnemies);
-            Timeline.Display.drawMovePath(this.selectedUnit);
+            if (this.selectedUnit)
+                Timeline.Display.drawMovePath(this.selectedUnit);
         };
         Play.prototype.onMouseUp = function (p) {
             // console.log(p.x, p.y);

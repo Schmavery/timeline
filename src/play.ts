@@ -2,6 +2,7 @@
 module Timeline {
   export class Play extends Phaser.State {
     layer: Phaser.TilemapLayer;
+    map: Phaser.Tilemap;
     prevTime: number;
     moveArea: Point[];
     selectedUnit: Unit;
@@ -39,19 +40,18 @@ module Timeline {
       sprite.inputEnabled = true;
       sprite.events.onInputDown.add(this.playTurn.bind(this), this);
 
-      var map = this.game.add.tilemap("test-map");
-      this.layer = map.createLayer("Tile Layer 1");
-      map.addTilesetImage("testset", "test-tile-set");
+      this.map = this.game.add.tilemap("test-map");
+      this.layer = this.map.createLayer("Tile Layer 1");
+      this.map.addTilesetImage("testset", "test-tile-set");
       this.layer.scale.set(SCALE);
 
       // Init the display
-      Display.init(this.game, map);
+      Display.init(this.game, this.map);
 
       //console.log(this.layer);
-      var tileset = map.tilesets[map.getTilesetIndex('testset')];
-      for (var i = 0; i < map.width; i++){
-        for (var j = 0; j < map.height; j++){
-          var tile = map.getTile(i, j, "Tile Layer 1");
+      for (var i = 0; i < this.map.width; i++){
+        for (var j = 0; j < this.map.height; j++){
+          var tile = this.map.getTile(i, j, "Tile Layer 1");
           var props = tile.properties;
           if (Object.keys(props).length !== 0){
             for (var key in props){
@@ -66,7 +66,7 @@ module Timeline {
       }
       console.log(GameState.propertyMap);
 
-      var characters = createGameObjectFromLayer("Characters", map);
+      var characters = createGameObjectFromLayer("Characters", this.map);
       var board = new Board(characters);
       GameState.boards.push(board);
       Display.loadSpritesFromObjects(characters);
@@ -96,6 +96,10 @@ module Timeline {
     }
 
     onMouseDown(mouse) {
+      // Exit if we clicked outside the bounds of the board.
+      if (mouse.x > this.map.widthInPixels*SCALE || 
+          mouse.y > this.map.heightInPixels*SCALE) return;
+      
       var characters = GameState.currentBoard.allCharacters;
       var clickedCell = {
         x: ~~(mouse.x / (SCALE * TILE_SIZE)),
@@ -152,7 +156,7 @@ module Timeline {
 
       Display.drawMoveArea(this.moveArea);
       Display.drawTargetableEnemies(targetableEnemies);
-      Display.drawMovePath(this.selectedUnit);
+      if (this.selectedUnit) Display.drawMovePath(this.selectedUnit);
     }
 
     onMouseUp(p) {
