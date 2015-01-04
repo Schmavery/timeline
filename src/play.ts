@@ -105,7 +105,7 @@ module Timeline {
         x: ~~(mouse.x / (SCALE * TILE_SIZE)),
         y: ~~(mouse.y / (SCALE * TILE_SIZE))
       };
-      console.log(mouse.button);
+
       // maybeCharacter will be equal to the selected character if
       // clickedCell is a cell that contains a character
       // if not, we'll check if the user clicked on a movePath cell or a
