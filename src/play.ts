@@ -97,15 +97,15 @@ module Timeline {
 
     onMouseDown(mouse) {
       // Exit if we clicked outside the bounds of the board.
-      if (mouse.x > this.map.widthInPixels*SCALE || 
+      if (mouse.x > this.map.widthInPixels*SCALE ||
           mouse.y > this.map.heightInPixels*SCALE) return;
-      
+
       var characters = GameState.currentBoard.allCharacters;
       var clickedCell = {
         x: ~~(mouse.x / (SCALE * TILE_SIZE)),
         y: ~~(mouse.y / (SCALE * TILE_SIZE))
       };
-
+      console.log(mouse.button);
       // maybeCharacter will be equal to the selected character if
       // clickedCell is a cell that contains a character
       // if not, we'll check if the user clicked on a movePath cell or a
@@ -115,7 +115,7 @@ module Timeline {
         this.selectedUnit = maybeCharacter;
         console.log(maybeCharacter);
       } else if(this.selectedUnit) {
-        if(contains(this.selectedUnit.nextMovePath, clickedCell, comparePoints)) {
+        if(contains(this.selectedUnit.nextMovePath, clickedCell, comparePoints) && mouse.button === 2) {
           var removedCells = removeFrom(this.selectedUnit.nextMovePath, clickedCell, comparePoints);
           if(this.selectedUnit.nextAttack && contains(removedCells, this.selectedUnit.nextAttack.trigger, comparePoints)) {
             this.selectedUnit.nextAttack = null;
