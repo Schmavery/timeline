@@ -42,6 +42,7 @@ module Timeline {
 
       this.map = this.game.add.tilemap("test-map");
       this.layer = this.map.createLayer("Tile Layer 1");
+      GameState.layer = this.layer //TODO: Fix this
       this.map.addTilesetImage("testset", "test-tile-set");
       this.layer.scale.set(SCALE);
 
@@ -60,7 +61,7 @@ module Timeline {
               else if (props[key].toLowerCase() === "false") props[key] = false;
               else if (!isNaN(props[key])) props[key] = parseInt(props[key]);
             }
-            GameState.propertyMap[hashPoint({x:i, y:j})] = tile.properties;
+            GameState.propertyMap[hashPoint({x:i, y:j})] = props;
           }
         }
       }

@@ -205,16 +205,40 @@ var Timeline;
     }
     function isVisible(point) {
         var characters = Timeline.GameState.currentBoard.allCharacters;
+        var line = new Phaser.Line();
+        line.end.set(toWorldCoord(point.x + 0.5), toWorldCoord(point.y + 0.5));
         for (var i = 0; i < characters.length; i++) {
             var c = characters[i];
             if (!Timeline.isAlly(c))
                 continue;
-            if (Timeline.isNear(c, point, c.visionRange))
-                return true;
+            if (Timeline.isNear(c, point, c.visionRange)) {
+                //return true;
+                // Tile is visible:
+                var centerProp = Timeline.GameState.propertyMap[Timeline.hashPoint(point)];
+                var targetProp = Timeline.GameState.propertyMap[Timeline.hashPoint(c)];
+                var centerElev = (centerProp && centerProp.elevation) ? centerProp.elevation : 0;
+                var targetElev = (targetProp && targetProp.elevation) ? targetProp.elevation : 0;
+                if (targetElev < centerElev)
+                    return true;
+                else if (targetElev === centerElev) {
+                    // Do raycasting to check for obstacles.
+                    line.start.set(toWorldCoord(c.x + 0.5), toWorldCoord(c.y + 0.5));
+                    var tiles = Timeline.GameState.layer.getRayCastTiles(line).filter(function (t) { return (t.x !== point.x) || (t.y !== point.y); });
+                    var filtered = tiles.filter(function (t) { return Timeline.GameState.propertyMap[Timeline.hashPoint(t)] && Timeline.GameState.propertyMap[Timeline.hashPoint(t)].collision; });
+                    //console.log(c, point, filtered);
+                    if (filtered.length === 0) {
+                        return true;
+                    }
+                }
+            }
         }
         return false;
     }
     Timeline.isVisible = isVisible;
+    function toWorldCoord(coord) {
+        return coord * Timeline.TILE_SIZE;
+    }
+    Timeline.toWorldCoord = toWorldCoord;
     function createGameObjectFromLayer(layerName, map) {
         var arr = map.objects[layerName];
         var ret = [];
@@ -245,7 +269,7 @@ var Timeline;
             this.y = 0;
             this.isMoving = false;
             this.nextMovePath = [];
-            this.visionRange = 4;
+            this.visionRange = 6;
         }
         Unit.prototype.setPosition = function (x, y) {
             this.x = x;
@@ -337,6 +361,7 @@ var Timeline;
         GameState.currentBoard = null;
         GameState.propertyMap = {};
         GameState.myTeamNumber = 1;
+        GameState.layer; // Sorryyyyyy it's temporary?  I need it in isVisible()!
     })(GameState = Timeline.GameState || (Timeline.GameState = {}));
     var Board = (function () {
         function Board(c) {
@@ -400,6 +425,7 @@ var Timeline;
             sprite.events.onInputDown.add(this.playTurn.bind(this), this);
             this.map = this.game.add.tilemap("test-map");
             this.layer = this.map.createLayer("Tile Layer 1");
+            Timeline.GameState.layer = this.layer; //TODO: Fix this
             this.map.addTilesetImage("testset", "test-tile-set");
             this.layer.scale.set(Timeline.SCALE);
             // Init the display
@@ -419,7 +445,7 @@ var Timeline;
                             else if (!isNaN(props[key]))
                                 props[key] = parseInt(props[key]);
                         }
-                        Timeline.GameState.propertyMap[Timeline.hashPoint({ x: i, y: j })] = tile.properties;
+                        Timeline.GameState.propertyMap[Timeline.hashPoint({ x: i, y: j })] = props;
                     }
                 }
             }

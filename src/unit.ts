@@ -32,7 +32,7 @@ module Timeline {
       this.y = 0;
       this.isMoving = false;
       this.nextMovePath = [];
-      this.visionRange = 4;
+      this.visionRange = 6;
     }
 
     setPosition(x: number, y: number) {

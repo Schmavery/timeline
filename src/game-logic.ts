@@ -68,13 +68,42 @@ module Timeline {
 
   export function isVisible(point: Point) {
     var characters = GameState.currentBoard.allCharacters;
+    var line = new Phaser.Line();
+    line.end.set(toWorldCoord(point.x + 0.5),toWorldCoord(point.y + 0.5));
     for(var i = 0; i < characters.length; i++) {
       var c = characters[i];
       if(!isAlly(c)) continue;
-      if(isNear(c, point, c.visionRange)) return true;
-    }
 
+      if(isNear(c, point, c.visionRange)){
+      //return true;
+        // Tile is visible:
+        var centerProp = GameState.propertyMap[hashPoint(point)];
+        var targetProp = GameState.propertyMap[hashPoint(c)];
+        var centerElev = (centerProp && centerProp.elevation) ? centerProp.elevation : 0;
+        var targetElev = (targetProp && targetProp.elevation) ? targetProp.elevation : 0;
+        if (targetElev < centerElev) return true;
+        else if (targetElev === centerElev) {
+          // Do raycasting to check for obstacles.
+          line.start.set(toWorldCoord(c.x + 0.5), toWorldCoord(c.y + 0.5));
+          var tiles = GameState.layer.getRayCastTiles(line).
+                filter((t) => (t.x!==point.x)||(t.y!==point.y));
+          var filtered = tiles.filter((t) =>
+            GameState.propertyMap[hashPoint(t)] &&
+            GameState.propertyMap[hashPoint(t)].collision);
+            //console.log(c, point, filtered);
+          if (filtered.length === 0){
+            return true;
+          }
+        }
+        // Otherwise the target is above the center point, so is 
+        // invisible to this character.  Keep looping, lazy.
+      }
+    }
     return false;
+  }
+
+  export function toWorldCoord(coord : number) : number{
+    return coord*TILE_SIZE;
   }
 
   export function createGameObjectFromLayer(layerName: string, map: Phaser.Tilemap): Unit[] {

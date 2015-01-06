@@ -16,6 +16,7 @@ module Timeline {
     export var currentBoard: Board = null;
     export var propertyMap = {};
     export var myTeamNumber = 1;
+    export var layer; // Sorryyyyyy it's temporary?  I need it in isVisible()!
   }
 
   export class Board {
