@@ -42,7 +42,7 @@ module Timeline {
 
       this.map = this.game.add.tilemap("test-map");
       this.layer = this.map.createLayer("Tile Layer 1");
-      GameState.layer = this.layer //TODO: Fix this
+      layer = this.layer //TODO: Fix this
       this.map.addTilesetImage("testset", "test-tile-set");
       this.layer.scale.set(SCALE);
 
@@ -177,22 +177,24 @@ module Timeline {
     }
 
     playTurn() {
-      var characters = GameState.currentBoard.allCharacters;
-      var max = characters.length;
-      for (var i = 0; i < max; i++) {
-        if(!characters[i].isMoving) {
-          characters[i].isMoving = true;
-          // Remove the empty callback when figured out the optional type
-          // in TS
-          Display.moveUnitAlongPath(characters[i], function(u) {
-            // reset isMoving so we can select the unit again
-            u.isMoving = false;
-            u.nextMovePath = [];
-          });
+      Network.saveState(function() {
+        var characters = GameState.currentBoard.allCharacters;
+        var max = characters.length;
+        for (var i = 0; i < max; i++) {
+          if(!characters[i].isMoving) {
+            characters[i].isMoving = true;
+            // Remove the empty callback when figured out the optional type
+            // in TS
+            Display.moveUnitAlongPath(characters[i], function(u) {
+              // reset isMoving so we can select the unit again
+              u.isMoving = false;
+              u.nextMovePath = [];
+            });
+          }
         }
-      }
-      this.selectedUnit = null;
-      this.moveArea = [];
+        this.selectedUnit = null;
+        this.moveArea = [];
+      }.bind(this));
     }
     mouseWheelCallback(event) {
       event.preventDefault();

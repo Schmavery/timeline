@@ -11,12 +11,13 @@ module Timeline {
   }
 
 
+  export var layer; // Sorryyyyyy it's temporary?  I need it in isVisible()!
+
   export module GameState {
     export var boards: Board[] = [];
     export var currentBoard: Board = null;
     export var propertyMap = {};
     export var myTeamNumber = 1;
-    export var layer; // Sorryyyyyy it's temporary?  I need it in isVisible()!
   }
 
   export class Board {

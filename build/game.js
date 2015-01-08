@@ -80,7 +80,7 @@ var Timeline;
     }
     Timeline.isNear = isNear;
     function hashPoint(p) {
-        return "" + p.x + "." + p.y;
+        return "" + p.x + "-" + p.y;
     }
     Timeline.hashPoint = hashPoint;
     function comparePoints(p1, p2) {
@@ -223,7 +223,7 @@ var Timeline;
                 else if (targetElev === centerElev) {
                     // Do raycasting to check for obstacles.
                     line.start.set(toWorldCoord(c.x + 0.5), toWorldCoord(c.y + 0.5));
-                    var tiles = Timeline.GameState.layer.getRayCastTiles(line).filter(function (t) { return (t.x !== point.x) || (t.y !== point.y); });
+                    var tiles = Timeline.layer.getRayCastTiles(line).filter(function (t) { return (t.x !== point.x) || (t.y !== point.y); });
                     var filtered = tiles.filter(function (t) { return Timeline.GameState.propertyMap[Timeline.hashPoint(t)] && Timeline.GameState.propertyMap[Timeline.hashPoint(t)].collision; });
                     //console.log(c, point, filtered);
                     if (filtered.length === 0) {
@@ -355,13 +355,13 @@ var Timeline;
         return Point;
     })();
     Timeline.Point = Point;
+    Timeline.layer; // Sorryyyyyy it's temporary?  I need it in isVisible()!
     var GameState;
     (function (GameState) {
         GameState.boards = [];
         GameState.currentBoard = null;
         GameState.propertyMap = {};
         GameState.myTeamNumber = 1;
-        GameState.layer; // Sorryyyyyy it's temporary?  I need it in isVisible()!
     })(GameState = Timeline.GameState || (Timeline.GameState = {}));
     var Board = (function () {
         function Board(c) {
@@ -425,7 +425,7 @@ var Timeline;
             sprite.events.onInputDown.add(this.playTurn.bind(this), this);
             this.map = this.game.add.tilemap("test-map");
             this.layer = this.map.createLayer("Tile Layer 1");
-            Timeline.GameState.layer = this.layer; //TODO: Fix this
+            Timeline.layer = this.layer; //TODO: Fix this
             this.map.addTilesetImage("testset", "test-tile-set");
             this.layer.scale.set(Timeline.SCALE);
             // Init the display
@@ -549,22 +549,24 @@ var Timeline;
             // }
         };
         Play.prototype.playTurn = function () {
-            var characters = Timeline.GameState.currentBoard.allCharacters;
-            var max = characters.length;
-            for (var i = 0; i < max; i++) {
-                if (!characters[i].isMoving) {
-                    characters[i].isMoving = true;
-                    // Remove the empty callback when figured out the optional type
-                    // in TS
-                    Timeline.Display.moveUnitAlongPath(characters[i], function (u) {
-                        // reset isMoving so we can select the unit again
-                        u.isMoving = false;
-                        u.nextMovePath = [];
-                    });
+            Timeline.Network.saveState(function () {
+                var characters = Timeline.GameState.currentBoard.allCharacters;
+                var max = characters.length;
+                for (var i = 0; i < max; i++) {
+                    if (!characters[i].isMoving) {
+                        characters[i].isMoving = true;
+                        // Remove the empty callback when figured out the optional type
+                        // in TS
+                        Timeline.Display.moveUnitAlongPath(characters[i], function (u) {
+                            // reset isMoving so we can select the unit again
+                            u.isMoving = false;
+                            u.nextMovePath = [];
+                        });
+                    }
                 }
-            }
-            this.selectedUnit = null;
-            this.moveArea = [];
+                this.selectedUnit = null;
+                this.moveArea = [];
+            }.bind(this));
         };
         Play.prototype.mouseWheelCallback = function (event) {
             event.preventDefault();
@@ -926,5 +928,31 @@ var Timeline;
             map.push({ key: key, val: val });
         }
     })(Display = Timeline.Display || (Timeline.Display = {}));
+})(Timeline || (Timeline = {}));
+var Timeline;
+(function (Timeline) {
+    var Network;
+    (function (Network) {
+        var firebase = new Firebase("https://timelinegame.firebaseio.com");
+        var yourID = "10";
+        var opponent = "20";
+        firebase.authWithOAuthPopup("facebook", function (error, authData) {
+            if (error) {
+                console.log("Login Failed!", error);
+            }
+            else {
+                console.log("Authenticated successfully with payload:", authData);
+            }
+        });
+        function saveState(callback) {
+            var obj = {};
+            obj[hashID(yourID, opponent)] = Timeline.GameState;
+            firebase.push(obj, callback);
+        }
+        Network.saveState = saveState;
+        function hashID(id1, id2) {
+            return parseInt(id1) < parseInt(id2) ? id1 + "-" + id2 : id2 + "-" + id1;
+        }
+    })(Network = Timeline.Network || (Timeline.Network = {}));
 })(Timeline || (Timeline = {}));
 //# sourceMappingURL=game.js.map

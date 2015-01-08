@@ -86,7 +86,7 @@ module Timeline {
   }
 
   export function hashPoint(p) {
-    return "" + p.x + "." + p.y;
+    return "" + p.x + "-" + p.y;
   }
 
   export function comparePoints(p1, p2) {

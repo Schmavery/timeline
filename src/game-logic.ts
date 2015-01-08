@@ -85,7 +85,7 @@ module Timeline {
         else if (targetElev === centerElev) {
           // Do raycasting to check for obstacles.
           line.start.set(toWorldCoord(c.x + 0.5), toWorldCoord(c.y + 0.5));
-          var tiles = GameState.layer.getRayCastTiles(line).
+          var tiles = layer.getRayCastTiles(line).
                 filter((t) => (t.x!==point.x)||(t.y!==point.y));
           var filtered = tiles.filter((t) =>
             GameState.propertyMap[hashPoint(t)] &&
@@ -95,7 +95,7 @@ module Timeline {
             return true;
           }
         }
-        // Otherwise the target is above the center point, so is 
+        // Otherwise the target is above the center point, so is
         // invisible to this character.  Keep looping, lazy.
       }
     }
