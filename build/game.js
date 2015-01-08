@@ -369,9 +369,13 @@ var Timeline;
             this.deadCharacters = [];
         }
         Board.prototype.clone = function () {
-            return new Board(this.allCharacters.map(function (c) {
+            var b = new Board(this.allCharacters.map(function (c) {
                 return c.clone();
             }));
+            b.deadCharacters = (this.deadCharacters.map(function (c) {
+                return c.clone();
+            }));
+            return b;
         };
         return Board;
     })();
@@ -628,6 +632,33 @@ var Timeline;
     })(Phaser.Game);
     Timeline.Game = Game;
     var game = new Game(Timeline.GAME_WIDTH * Timeline.SCALE, Timeline.GAME_HEIGHT * Timeline.SCALE);
+})(Timeline || (Timeline = {}));
+/// <reference path="references.ts" />
+var Timeline;
+(function (Timeline) {
+    var Network;
+    (function (Network) {
+        var firebase = new Firebase("https://timelinegame.firebaseio.com");
+        var yourID = "10";
+        var opponent = "20";
+        firebase.authWithOAuthPopup("facebook", function (error, authData) {
+            if (error) {
+                console.log("Login Failed!", error);
+            }
+            else {
+                console.log("Authenticated successfully with payload:", authData);
+            }
+        });
+        function saveState(callback) {
+            var obj = {};
+            obj[hashID(yourID, opponent)] = Timeline.GameState;
+            firebase.push(obj, callback);
+        }
+        Network.saveState = saveState;
+        function hashID(id1, id2) {
+            return parseInt(id1) < parseInt(id2) ? id1 + "-" + id2 : id2 + "-" + id1;
+        }
+    })(Network = Timeline.Network || (Timeline.Network = {}));
 })(Timeline || (Timeline = {}));
 /// <reference path="references.ts" />
 var Timeline;
@@ -928,31 +959,5 @@ var Timeline;
             map.push({ key: key, val: val });
         }
     })(Display = Timeline.Display || (Timeline.Display = {}));
-})(Timeline || (Timeline = {}));
-var Timeline;
-(function (Timeline) {
-    var Network;
-    (function (Network) {
-        var firebase = new Firebase("https://timelinegame.firebaseio.com");
-        var yourID = "10";
-        var opponent = "20";
-        firebase.authWithOAuthPopup("facebook", function (error, authData) {
-            if (error) {
-                console.log("Login Failed!", error);
-            }
-            else {
-                console.log("Authenticated successfully with payload:", authData);
-            }
-        });
-        function saveState(callback) {
-            var obj = {};
-            obj[hashID(yourID, opponent)] = Timeline.GameState;
-            firebase.push(obj, callback);
-        }
-        Network.saveState = saveState;
-        function hashID(id1, id2) {
-            return parseInt(id1) < parseInt(id2) ? id1 + "-" + id2 : id2 + "-" + id1;
-        }
-    })(Network = Timeline.Network || (Timeline.Network = {}));
 })(Timeline || (Timeline = {}));
 //# sourceMappingURL=game.js.map

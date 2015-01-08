@@ -8,3 +8,4 @@
 /// <reference path="play.ts" />
 /// <reference path="game.ts" />
 /// <reference path="display.ts" />
+/// <reference path="networking.ts" />

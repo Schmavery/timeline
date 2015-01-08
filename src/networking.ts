@@ -1,3 +1,4 @@
+/// <reference path="references.ts" />
 module Timeline {
   export module Network {
     var firebase = new Firebase("https://timelinegame.firebaseio.com");

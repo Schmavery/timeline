@@ -30,7 +30,9 @@ module Timeline {
     }
 
     clone(): Board {
-      return new Board(this.allCharacters.map((c) => {return c.clone();}));
+      var b = new Board(this.allCharacters.map((c) => {return c.clone();}));
+      b.deadCharacters = (this.deadCharacters.map((c) => {return c.clone();}));
+      return b;
     }
   }
 
