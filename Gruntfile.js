@@ -53,14 +53,22 @@ module.exports = function(grunt) {
         }
       }
     },
+    react: {
+      single_file_output: {
+        files: {
+          'src/ui.ts': 'src/ui.jsx'
+        }
+      },
+    }
   });
 
   grunt.loadNpmTasks('grunt-contrib-watch');
   grunt.loadNpmTasks('grunt-contrib-connect');
   grunt.loadNpmTasks('grunt-open');
   grunt.loadNpmTasks('grunt-typescript');
+  grunt.loadNpmTasks('grunt-react');
 
-  grunt.registerTask('server', ['typescript', 'connect:livereload', 'open', 'watch']);
+  grunt.registerTask('server', ['react', 'typescript', 'connect:livereload', 'open', 'watch']);
 
   grunt.registerTask('default', ['server']);
 };

@@ -32,9 +32,11 @@ module Timeline {
 
       // TODO: Uncomment for prod
       // this.state.start("Menu");
+    }
+
+    play(state) {
+      GameState = state;
       this.state.start("Play");
     }
   }
-
-  var game = new Game(GAME_WIDTH * SCALE, GAME_HEIGHT * SCALE);
 }

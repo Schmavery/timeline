@@ -136,6 +136,111 @@ var Timeline;
     }
     Timeline.partial = partial;
 })(Timeline || (Timeline = {}));
+var Timeline;
+(function (Timeline) {
+    var UI;
+    (function (UI) {
+        var startGameButton = $("#start-game");
+        var playAgainstFriendsButton = $("#play-against-friends");
+        var currentGamesList = $("#current-games");
+        var requestList = $("#request-list");
+        var friendsList = $("#friends-list");
+        var popupDiv = $("#popup");
+        var menu = $("#menu");
+        function createFriendsList(friends, callback) {
+            var allRows = friends.map(function (x) { return row(x.name, Timeline.partial(callback, x.id, x.name)); });
+            allRows.map(function (x) { return friendsList.append(x); });
+        }
+        UI.createFriendsList = createFriendsList;
+        function createAppRequestsList(friendsToRequest, callback) {
+            var allRows = friendsToRequest.map(function (x) { return row(x.name, Timeline.partial(callback, x.id, x.name)); });
+            allRows.map(function (x) { return requestList.append(x); });
+        }
+        UI.createAppRequestsList = createAppRequestsList;
+        function hide() {
+            menu.hide();
+        }
+        UI.hide = hide;
+        function popup() {
+            var args = [];
+            for (var _i = 0; _i < arguments.length; _i++) {
+                args[_i - 0] = arguments[_i];
+            }
+            var txt = "";
+            var callback = null;
+            args.map(function (x) {
+                if (typeof x === "function") {
+                    callback = x;
+                    return;
+                }
+                if (typeof x === "object") {
+                    txt += JSON.stringify(x);
+                }
+                else {
+                    txt += x;
+                }
+            });
+            var div = document.createElement("div");
+            div.textContent = txt;
+            div.style.opacity = '1.0';
+            div.style.border = "1px solid black";
+            div.style.padding = "10px";
+            div.style.margin = "5px";
+            if (callback) {
+                var div2 = document.createElement("span");
+                div2.textContent = "yes";
+                div2.style.cursor = "pointer";
+                div2.onclick = function () {
+                    $(div).remove();
+                    callback(true);
+                };
+                div2.onmouseenter = function () { return div2.style.color = "red"; };
+                div2.onmouseleave = function () { return div2.style.color = "black"; };
+                var div3 = document.createElement("span");
+                div3.textContent = " / ";
+                var div4 = document.createElement("span");
+                div4.textContent = "no";
+                div4.style.cursor = "pointer";
+                div4.onclick = function () {
+                    $(div).remove();
+                    callback(false);
+                };
+                div4.onmouseenter = function () { return div4.style.color = "red"; };
+                div4.onmouseleave = function () { return div4.style.color = "black"; };
+                var div5 = document.createElement("span");
+                div5.style.cssFloat = "right";
+                div5.appendChild(div2);
+                div5.appendChild(div3);
+                div5.appendChild(div4);
+                div.appendChild(div5);
+            }
+            else {
+                $(div).animate({ opacity: 0 }, 4000, function () { return $(div).remove(); });
+            }
+            popupDiv.append(div);
+        }
+        UI.popup = popup;
+        function row(txt, onclick) {
+            var d = document.createElement("td");
+            var parent = document.createElement("tr");
+            d.onclick = onclick;
+            d.textContent = txt;
+            d.style.cursor = "pointer";
+            d.style.border = "1px solid black";
+            d.style.padding = "10px";
+            d.onmouseenter = Timeline.partial(onMouseEnter, d);
+            d.onmouseleave = Timeline.partial(onMouseLeave, d);
+            parent.appendChild(d);
+            return parent;
+        }
+        function onMouseLeave(obj) {
+            obj.style.border = "1px solid black";
+        }
+        function onMouseEnter(obj) {
+            obj.style.border = "2px solid blue";
+        }
+    })(UI = Timeline.UI || (Timeline.UI = {}));
+})(Timeline || (Timeline = {}));
 /// <reference path="references.ts" />
 var Timeline;
 (function (Timeline) {
@@ -356,13 +461,12 @@ var Timeline;
     })();
     Timeline.Point = Point;
     Timeline.layer; // Sorryyyyyy it's temporary?  I need it in isVisible()!
-    var GameState;
-    (function (GameState) {
-        GameState.boards = [];
-        GameState.currentBoard = null;
-        GameState.propertyMap = {};
-        GameState.myTeamNumber = 1;
-    })(GameState = Timeline.GameState || (Timeline.GameState = {}));
+    Timeline.GameState = {
+        boards: [],
+        currentBoard: null,
+        propertyMap: {},
+        myTeamNumber: 1
+    };
     var Board = (function () {
         function Board(c) {
             this.allCharacters = c;
@@ -381,7 +485,7 @@ var Timeline;
     })();
     Timeline.Board = Board;
     function getUnitAt(p) {
-        var characters = GameState.currentBoard.allCharacters;
+        var characters = Timeline.GameState.currentBoard.allCharacters;
         for (var i = 0; i < characters.length; i++) {
             if (characters[i].x === p.x && characters[i].y === p.y)
                 return characters[i];
@@ -390,7 +494,7 @@ var Timeline;
     }
     Timeline.getUnitAt = getUnitAt;
     function isAlly(u) {
-        return u.teamNumber === GameState.myTeamNumber;
+        return u.teamNumber === Timeline.GameState.myTeamNumber;
     }
     Timeline.isAlly = isAlly;
 })(Timeline || (Timeline = {}));
@@ -626,33 +730,174 @@ var Timeline;
             this.state.add("Play", Timeline.Play);
             // TODO: Uncomment for prod
             // this.state.start("Menu");
-            this.state.start("Play");
         }
+        Game.prototype.play = function (state) {
+            Timeline.GameState = state;
+            this.state.start("Play");
+        };
         return Game;
     })(Phaser.Game);
     Timeline.Game = Game;
-    var game = new Game(Timeline.GAME_WIDTH * Timeline.SCALE, Timeline.GAME_HEIGHT * Timeline.SCALE);
 })(Timeline || (Timeline = {}));
 /// <reference path="references.ts" />
 var Timeline;
 (function (Timeline) {
+    var game = null;
     var Network;
     (function (Network) {
-        var firebase = new Firebase("https://timelinegame.firebaseio.com");
-        var yourID = "10";
-        var opponent = "20";
+        var yourID = "1000";
+        var opponentID = "2000";
+        var accessToken = "";
+        var yourName = "Benjamin San Souci";
+        var firebase = new Firebase("https://timelinegame.firebaseio.com/");
         firebase.authWithOAuthPopup("facebook", function (error, authData) {
             if (error) {
                 console.log("Login Failed!", error);
             }
             else {
                 console.log("Authenticated successfully with payload:", authData);
+                yourID = authData[authData.provider].id;
+                accessToken = authData[authData.provider].accessToken;
+                yourName = authData[authData.provider].displayName;
+                var yourFirebase = firebase.child(yourID);
+                yourFirebase.update({
+                    connected: true,
+                    invite: {},
+                    accepted: {}
+                });
+                yourFirebase.child("invite").on("value", function (snapshot) {
+                    var val = snapshot.val();
+                    if (val) {
+                        Timeline.UI.popup(val.name + ": " + val.message, Timeline.partial(acceptInvitation, val.id, val.name));
+                    }
+                });
+                yourFirebase.child("accepted").on("value", function (snapshot) {
+                    var val = snapshot.val();
+                    if (val) {
+                        // If the opponent accepted the game request we set its ID and we
+                        // start the game
+                        if (val.accepted) {
+                            Timeline.UI.popup(val.name, " accepted your game request");
+                            opponentID = val.id;
+                            Timeline.UI.hide();
+                            startGame(Timeline.GameState);
+                            firebase.child(hashID(yourID, opponentID)).on("value", function (snapshot) {
+                                var val = snapshot.val();
+                                console.log(val);
+                            });
+                        }
+                        else {
+                            Timeline.UI.popup(val.name, " refused your game request :(");
+                        }
+                    }
+                });
+                // Use the access token to consume the Facebook Graph API
+                FB.api('/me/friends', {
+                    access_token: accessToken
+                }, function (res) {
+                    Timeline.UI.createFriendsList(res.data, sendPlayRequest);
+                });
+                FB.api('/me/invitable_friends', {
+                    access_token: accessToken
+                }, function (res2) {
+                    Timeline.UI.createAppRequestsList(res2.data, sendRequestToApp);
+                });
             }
+        }, {
+            scope: "email,user_friends"
         });
+        function acceptInvitation(id, name, bool) {
+            firebase.child(id).child("accepted").update({
+                id: yourID,
+                name: yourName,
+                accepted: bool
+            });
+            if (bool) {
+                opponentID = id;
+                Timeline.UI.hide();
+                // The one accepting the request will be player 2 (and therefore will
+                // play second)
+                Timeline.GameState.myTeamNumber = 2;
+                startGame(Timeline.GameState);
+                firebase.child(hashID(yourID, opponentID)).on("value", function (snapshot) {
+                    var val = snapshot.val();
+                    console.log(val);
+                });
+            }
+        }
+        function checkURL(callback) {
+            var p = document.createElement('a');
+            p.href = window.location.href;
+            var allGetElements = [];
+            if (p.search.length > 0) {
+                allGetElements = p.search.substring(1).split("&");
+            }
+            var data = {};
+            allGetElements.map(function (val) {
+                var tmp = val.split("=");
+                data[tmp[0]] = tmp[1];
+            });
+            // To annoy typescript
+            if (data["request_ids"]) {
+                FB.api(yourID + '/apprequests?fields=id,application,to,from,data,message,action_type,object,created_time&access_token=' + accessToken, function (val) {
+                    console.log(val.data);
+                    callback();
+                    // This will be used to get the profile picture
+                    // g.opponentID = parseInt(val.data[0].from.id);
+                    // g.opponentName = val.data[0].from.name;
+                    // g.concatID = (g.userID < g.opponentID) ? "" + g.userID + g.opponentID : "" + g.opponentID + g.userID;
+                    // var query = new Parse.Query(g.ParseGameBoard);
+                    // query.equalTo("concatID", g.concatID);
+                    // query.find({
+                    //   success: function(results) {
+                    //     if(results.length === 0) {
+                    //       console.log("No board found");
+                    //       // No data found, so load a new game.
+                    //       startGame();
+                    //       return;
+                    //     }
+                    //     if(results.length > 1) {
+                    //       // LOL
+                    //       console.log("Too many boards found");
+                    //     }
+                    //     startGame(results[0], _.partial(clearEvent, val.data[0].id));
+                    //   },
+                    //   error: function(error) {
+                    //     console.log("Error when querying parse");
+                    //   }
+                    // });
+                });
+            }
+        }
+        function sendPlayRequest(id, name) {
+            firebase.child(id).once("value", function (snapshot) {
+                var val = snapshot.val();
+                if (val.connected) {
+                    firebase.child(id).child("invite").update({
+                        message: "Hey do you want to play?",
+                        name: yourName,
+                        id: yourID
+                    });
+                }
+                else {
+                    FB.ui({ method: 'apprequests', to: id, title: 'Timeline', message: 'Try Timeline!', }, Timeline.partial(requestCallback, id, name));
+                }
+            });
+            Timeline.UI.popup("Game request sent to " + name);
+        }
+        function sendRequestToApp(id, name) {
+            FB.ui({ method: 'apprequests', to: id, title: 'Timeline', message: 'Try Timeline!', }, Timeline.partial(requestCallback, id, name));
+        }
+        function requestCallback(id, name) {
+            console.log("request successful", id);
+            Timeline.UI.popup("Invitation sent to " + name);
+        }
+        function startGame(state) {
+            game = new Timeline.Game(Timeline.GAME_WIDTH * Timeline.SCALE, Timeline.GAME_HEIGHT * Timeline.SCALE);
+            game.play(state);
+        }
         function saveState(callback) {
-            var obj = {};
-            obj[hashID(yourID, opponent)] = Timeline.GameState;
-            firebase.push(obj, callback);
+            firebase.child(hashID(yourID, opponentID)).update(Timeline.GameState, callback);
         }
         Network.saveState = saveState;
         function hashID(id1, id2) {
@@ -660,6 +905,13 @@ var Timeline;
         }
     })(Network = Timeline.Network || (Timeline.Network = {}));
 })(Timeline || (Timeline = {}));
+/// <reference path="../defs/phaser.d.ts" />
+/// <reference path="../defs/immutable.d.ts" />
+/// <reference path="../defs/firebase.d.ts" />
+/// <reference path='../node_modules/typed-react/typings/react/react.d.ts' />
+/// <reference path='../node_modules/typed-react/dist/typed-react.d.ts' />
+/// <reference path="../defs/jquery.d.ts" />
+/// <reference path="../defs/fb.d.ts" />
 /// <reference path="references.ts" />
 var Timeline;
 (function (Timeline) {

@@ -1,11 +1,74 @@
 <html>
 <head>
 <title>Timeline</title>
-<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/phaser/2.1.3/phaser.min.js"></script>
-<script src="https://cdn.firebase.com/js/client/2.1.0/firebase.js"></script>
-<!-- <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/immutable/3.3.0/immutable.min.js"></script> -->
-<script type="text/javascript" src="build/game.js"></script>
 </head>
 <body>
+<div id="menu">
+<button id="start-game">Start Game</button><br />
+  <table width="600">
+    <tbody>
+      <tr>
+        <td style="width:200px;">
+          <div style="overflow: scroll; height: 425px;">
+            Invite to Play:
+            <table style="border: 1px solid back;">
+            <tbody id="friends-list">
+
+            </tbody>
+            </table>
+          </div>
+        </td>
+        <td style="width:200px;">
+          <div style="overflow: scroll; height: 425px;">
+            Invite to Play:
+            <table style="border: 1px solid back;">
+            <tbody id="request-list">
+
+            </tbody>
+            </table>
+          </div>
+        </td>
+        <td>
+          <div style="overflow: scroll; height: 425px;">
+            Current Games:
+            <table style="border: 1px solid back;">
+            <tbody id="current-games">
+
+            </tbody>
+            </table>
+          </div>
+        </td>
+      </tr>
+
+    </tbody>
+  </table>
+  <div id="popup">
+
+  </div>
+</div>
+
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/phaser/2.1.3/phaser.min.js"></script>
+<script src="https://cdn.firebase.com/js/client/2.1.0/firebase.js"></script>
+<script type="text/javascript" src="https://code.jquery.com/jquery-2.1.3.min.js"></script>
+<script type="text/javascript">
+  // Asynchronously init the Facebook JS SDK
+window.fbAsyncInit = function() {
+  FB.init({
+    appId      : '1604942883068052',
+    version    : 'v2.1'
+  });
+};
+
+// Asynchronously load the Facebook JS SDK
+(function(d, s, id){
+   var js, fjs = d.getElementsByTagName(s)[0];
+   if (d.getElementById(id)) {return;}
+   js = d.createElement(s); js.id = id;
+   js.src = "//connect.facebook.net/en_US/sdk.js";
+   fjs.parentNode.insertBefore(js, fjs);
+ }(document, 'script', 'facebook-jssdk'));
+</script>
+<!-- <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/immutable/3.3.0/immutable.min.js"></script> -->
+<script type="text/javascript" src="build/game.js"></script>
 </body>
 </html>
