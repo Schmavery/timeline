@@ -18,6 +18,11 @@ module Timeline {
       allRows.map((x) => requestList.append(x));
     }
 
+    export function createCurrentGames(currentGames, callback) {
+      var allRows = currentGames.map((x) => row(x.name, partial(callback, x.id, x.name)));
+      allRows.map((x) => currentGamesList.append(x));
+    }
+
     export function hide() {
       menu.hide();
     }

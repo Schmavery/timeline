@@ -34,8 +34,7 @@ module Timeline {
       // this.state.start("Menu");
     }
 
-    play(state) {
-      GameState = state;
+    play() {
       this.state.start("Play");
     }
   }

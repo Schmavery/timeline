@@ -17,7 +17,8 @@ module Timeline {
     boards: [],
     currentBoard: null,
     propertyMap: {},
-    myTeamNumber: 1
+    myTeamNumber: 1,
+    myID: "1"
   };
 
   export class Board {

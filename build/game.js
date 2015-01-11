@@ -157,6 +157,11 @@ var Timeline;
             allRows.map(function (x) { return requestList.append(x); });
         }
         UI.createAppRequestsList = createAppRequestsList;
+        function createCurrentGames(currentGames, callback) {
+            var allRows = currentGames.map(function (x) { return row(x.name, Timeline.partial(callback, x.id, x.name)); });
+            allRows.map(function (x) { return currentGamesList.append(x); });
+        }
+        UI.createCurrentGames = createCurrentGames;
         function hide() {
             menu.hide();
         }
@@ -465,7 +470,8 @@ var Timeline;
         boards: [],
         currentBoard: null,
         propertyMap: {},
-        myTeamNumber: 1
+        myTeamNumber: 1,
+        myID: "1"
     };
     var Board = (function () {
         function Board(c) {
@@ -731,8 +737,7 @@ var Timeline;
             // TODO: Uncomment for prod
             // this.state.start("Menu");
         }
-        Game.prototype.play = function (state) {
-            Timeline.GameState = state;
+        Game.prototype.play = function () {
             this.state.start("Play");
         };
         return Game;
@@ -745,10 +750,10 @@ var Timeline;
     var game = null;
     var Network;
     (function (Network) {
-        var yourID = "1000";
         var opponentID = "2000";
         var accessToken = "";
         var yourName = "Benjamin San Souci";
+        var opponentName = "Benjamin San Souci";
         var firebase = new Firebase("https://timelinegame.firebaseio.com/");
         firebase.authWithOAuthPopup("facebook", function (error, authData) {
             if (error) {
@@ -756,10 +761,10 @@ var Timeline;
             }
             else {
                 console.log("Authenticated successfully with payload:", authData);
-                yourID = authData[authData.provider].id;
+                Timeline.GameState.myID = authData[authData.provider].id;
                 accessToken = authData[authData.provider].accessToken;
                 yourName = authData[authData.provider].displayName;
-                var yourFirebase = firebase.child(yourID);
+                var yourFirebase = firebase.child(Timeline.GameState.myID);
                 yourFirebase.update({
                     connected: true,
                     invite: {},
@@ -779,11 +784,20 @@ var Timeline;
                         if (val.accepted) {
                             Timeline.UI.popup(val.name, " accepted your game request");
                             opponentID = val.id;
+                            opponentName = val.name;
                             Timeline.UI.hide();
-                            startGame(Timeline.GameState);
-                            firebase.child(hashID(yourID, opponentID)).on("value", function (snapshot) {
-                                var val = snapshot.val();
-                                console.log(val);
+                            // TODO: load game here
+                            startGame();
+                            var obj = {};
+                            obj[opponentID] = opponentName;
+                            yourFirebase.child("allOpponents").update(obj);
+                            firebase.child(hashID(Timeline.GameState.myID, opponentID)).on("value", function (snapshot) {
+                                if (val.myID !== Timeline.GameState.myID) {
+                                    console.log("Your turn");
+                                }
+                                else {
+                                    console.log("His turn");
+                                }
                             });
                         }
                         else {
@@ -791,39 +805,112 @@ var Timeline;
                         }
                     }
                 });
-                // Use the access token to consume the Facebook Graph API
-                FB.api('/me/friends', {
-                    access_token: accessToken
-                }, function (res) {
-                    Timeline.UI.createFriendsList(res.data, sendPlayRequest);
-                });
+                // We do the next two requests in parallel but not the one for friends
+                // because we want to remove friends in the list against which we're
+                // already playing a game
                 FB.api('/me/invitable_friends', {
                     access_token: accessToken
                 }, function (res2) {
                     Timeline.UI.createAppRequestsList(res2.data, sendRequestToApp);
                 });
+                yourFirebase.child("allOpponents").once("value", function (snapshot) {
+                    var val = snapshot.val();
+                    if (val) {
+                        var arr = [];
+                        for (var prop in val) {
+                            if (val.hasOwnProperty(prop)) {
+                                arr.push({
+                                    id: prop,
+                                    name: val[prop]
+                                });
+                            }
+                        }
+                        Timeline.UI.createCurrentGames(arr, resumeCurrentGame);
+                    }
+                    FB.api('/me/friends', {
+                        access_token: accessToken
+                    }, function (res) {
+                        if (val) {
+                            res.data = res.data.filter(function (x) {
+                                if (val[x.id])
+                                    return false;
+                                return true;
+                            });
+                        }
+                        Timeline.UI.createFriendsList(res.data, sendPlayRequest);
+                    });
+                });
             }
         }, {
             scope: "email,user_friends"
         });
+        function resumeCurrentGame(id, name) {
+            opponentID = id;
+            opponentName = name;
+            Timeline.UI.hide();
+            // firebase.child(hashID(GameState.myID, opponentID)).once("value", function(snapshot) {
+            //   var val = snapshot.val();
+            //   console.log(val);
+            // });
+            // Adding callback for receiving new moves from the opponent
+            firebase.child(hashID(Timeline.GameState.myID, opponentID)).on("value", function (snapshot) {
+                var val = snapshot.val();
+                // TODO: load game here
+                startGame();
+                if (val.myID !== Timeline.GameState.myID) {
+                    console.log("Your turn");
+                }
+                else {
+                    console.log("His turn");
+                }
+                console.log("New move from opponent", val);
+            });
+        }
         function acceptInvitation(id, name, bool) {
             firebase.child(id).child("accepted").update({
-                id: yourID,
+                id: Timeline.GameState.myID,
                 name: yourName,
                 accepted: bool
             });
             if (bool) {
                 opponentID = id;
+                opponentName = name;
                 Timeline.UI.hide();
                 // The one accepting the request will be player 2 (and therefore will
                 // play second)
                 Timeline.GameState.myTeamNumber = 2;
-                startGame(Timeline.GameState);
-                firebase.child(hashID(yourID, opponentID)).on("value", function (snapshot) {
+                // TODO: load game here
+                startGame();
+                var obj = {};
+                obj[opponentID] = opponentName;
+                firebase.child(Timeline.GameState.myID).child("allOpponents").update(obj);
+                // Adding callback for receiving new moves from the opponent
+                firebase.child(hashID(Timeline.GameState.myID, opponentID)).on("value", function (snapshot) {
                     var val = snapshot.val();
-                    console.log(val);
+                    console.log("New move from opponent", val);
+                    playOpponentTurn(val);
                 });
             }
+        }
+        function playOpponentTurn(state) {
+            Timeline.GameState = state;
+            console.log(state);
+            // var chars = GameState.currentBoard.allCharacters;
+            // var max = chars.length;
+            // for (var i = 0; i < max; i++) {
+            //   if(!chars[i].isMoving) {
+            //     chars[i].isMoving = true;
+            //     // Remove the empty callback when figured out the optional type
+            //     // in TS
+            //     Display.moveUnitAlongPath(chars[i], function(u) {
+            //       // reset isMoving so we can select the unit again
+            //       u.isMoving = false;
+            //       u.nextMovePath = [];
+            //     });
+            //   }
+            // }
+            // this.selectedUnit = null;
+            // this.moveArea = [];
         }
         function checkURL(callback) {
             var p = document.createElement('a');
@@ -839,7 +926,7 @@ var Timeline;
             });
             // To annoy typescript
             if (data["request_ids"]) {
-                FB.api(yourID + '/apprequests?fields=id,application,to,from,data,message,action_type,object,created_time&access_token=' + accessToken, function (val) {
+                FB.api('me/apprequests?fields=id,application,to,from,data,message,action_type,object,created_time&access_token=' + accessToken, function (val) {
                     console.log(val.data);
                     callback();
                     // This will be used to get the profile picture
@@ -876,7 +963,7 @@ var Timeline;
                     firebase.child(id).child("invite").update({
                         message: "Hey do you want to play?",
                         name: yourName,
-                        id: yourID
+                        id: Timeline.GameState.myID
                     });
                 }
                 else {
@@ -892,12 +979,12 @@ var Timeline;
             console.log("request successful", id);
             Timeline.UI.popup("Invitation sent to " + name);
         }
-        function startGame(state) {
+        function startGame() {
             game = new Timeline.Game(Timeline.GAME_WIDTH * Timeline.SCALE, Timeline.GAME_HEIGHT * Timeline.SCALE);
-            game.play(state);
+            game.play();
         }
         function saveState(callback) {
-            firebase.child(hashID(yourID, opponentID)).update(Timeline.GameState, callback);
+            firebase.child(hashID(Timeline.GameState.myID, opponentID)).update(Timeline.GameState, callback);
         }
         Network.saveState = saveState;
         function hashID(id1, id2) {

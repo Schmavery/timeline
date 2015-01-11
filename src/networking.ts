@@ -2,10 +2,10 @@
 module Timeline {
   var game = null;
   export module Network {
-    var yourID = "1000";
     var opponentID = "2000";
     var accessToken = "";
     var yourName = "Benjamin San Souci";
+    var opponentName = "Benjamin San Souci";
 
     var firebase = new Firebase("https://timelinegame.firebaseio.com/");
 
@@ -14,11 +14,11 @@ module Timeline {
         console.log("Login Failed!", error);
       } else {
         console.log("Authenticated successfully with payload:", authData);
-        yourID = authData[authData.provider].id;
+        GameState.myID = authData[authData.provider].id;
         accessToken = authData[authData.provider].accessToken;
         yourName = authData[authData.provider].displayName;
 
-        var yourFirebase = firebase.child(yourID);
+        var yourFirebase = firebase.child(GameState.myID);
         yourFirebase.update({
           connected: true,
           invite: {},
@@ -40,12 +40,21 @@ module Timeline {
             if(val.accepted) {
               UI.popup(val.name, " accepted your game request");
               opponentID = val.id;
+              opponentName = val.name;
               UI.hide();
-              startGame(GameState);
 
-              firebase.child(hashID(yourID, opponentID)).on("value", function(snapshot) {
-                var val = snapshot.val();
-                console.log(val);
+              // TODO: load game here
+              startGame();
+
+              var obj = {};
+              obj[opponentID] = opponentName;
+              yourFirebase.child("allOpponents").update(obj);
+              firebase.child(hashID(GameState.myID, opponentID)).on("value", function(snapshot) {
+                if(val.myID !== GameState.myID) {
+                  console.log("Your turn");
+                } else {
+                  console.log("His turn");
+                }
               });
             } else {
               UI.popup(val.name, " refused your game request :(");
@@ -53,43 +62,124 @@ module Timeline {
           }
         });
 
-        // Use the access token to consume the Facebook Graph API
-        FB.api('/me/friends', {
-          access_token: accessToken
-        }, function(res) {
-          UI.createFriendsList(res.data, sendPlayRequest);
 
-        });
-
+        // We do the next two requests in parallel but not the one for friends
+        // because we want to remove friends in the list against which we're
+        // already playing a game
         FB.api('/me/invitable_friends', {
           access_token: accessToken
         }, function(res2) {
           UI.createAppRequestsList(res2.data, sendRequestToApp);
+        });
+
+        yourFirebase.child("allOpponents").once("value", function(snapshot) {
+          var val = snapshot.val();
+          if(val) {
+            var arr = [];
+            for(var prop in val) {
+              if(val.hasOwnProperty(prop)) {
+                arr.push({
+                  id: prop,
+                  name: val[prop]
+                });
+              }
+            }
+
+            UI.createCurrentGames(arr, resumeCurrentGame);
+          }
+
+          FB.api('/me/friends', {
+            access_token: accessToken
+          }, function(res) {
+            if(val) {
+              res.data = res.data.filter((x) => {
+                if(val[x.id]) return false;
+                return true;
+              });
+            }
+            UI.createFriendsList(res.data, sendPlayRequest);
+          });
         });
       }
     }, {
       scope: "email,user_friends"
     });
 
+    function resumeCurrentGame(id, name) {
+      opponentID = id;
+      opponentName = name;
+      UI.hide();
+
+      // firebase.child(hashID(GameState.myID, opponentID)).once("value", function(snapshot) {
+      //   var val = snapshot.val();
+      //   console.log(val);
+      // });
+      // Adding callback for receiving new moves from the opponent
+      firebase.child(hashID(GameState.myID, opponentID)).on("value", function(snapshot) {
+        var val = snapshot.val();
+
+        // TODO: load game here
+        startGame();
+
+        if(val.myID !== GameState.myID) {
+          console.log("Your turn");
+        } else {
+          console.log("His turn");
+        }
+        console.log("New move from opponent", val);
+      });
+    }
+
     function acceptInvitation(id, name, bool) {
       firebase.child(id).child("accepted").update({
-        id: yourID,
+        id: GameState.myID,
         name: yourName,
         accepted: bool
       });
       if(bool) {
         opponentID = id;
+        opponentName = name;
         UI.hide();
 
         // The one accepting the request will be player 2 (and therefore will
         // play second)
         GameState.myTeamNumber = 2;
-        startGame(GameState);
-        firebase.child(hashID(yourID, opponentID)).on("value", function(snapshot) {
+
+        // TODO: load game here
+        startGame();
+
+        var obj = {};
+        obj[opponentID] = opponentName;
+        firebase.child(GameState.myID).child("allOpponents").update(obj);
+
+        // Adding callback for receiving new moves from the opponent
+        firebase.child(hashID(GameState.myID, opponentID)).on("value", function(snapshot) {
           var val = snapshot.val();
-          console.log(val);
+          console.log("New move from opponent", val);
+          playOpponentTurn(val);
         });
       }
+    }
+
+    function playOpponentTurn(state) {
+      GameState = state;
+      console.log(state);
+      // var chars = GameState.currentBoard.allCharacters;
+      // var max = chars.length;
+      // for (var i = 0; i < max; i++) {
+      //   if(!chars[i].isMoving) {
+      //     chars[i].isMoving = true;
+      //     // Remove the empty callback when figured out the optional type
+      //     // in TS
+      //     Display.moveUnitAlongPath(chars[i], function(u) {
+      //       // reset isMoving so we can select the unit again
+      //       u.isMoving = false;
+      //       u.nextMovePath = [];
+      //     });
+      //   }
+      // }
+      // this.selectedUnit = null;
+      // this.moveArea = [];
     }
 
     function checkURL(callback) {
@@ -108,7 +198,7 @@ module Timeline {
 
       // To annoy typescript
       if(data["request_ids"]) {
-        FB.api(yourID + '/apprequests?fields=id,application,to,from,data,message,action_type,object,created_time&access_token=' + accessToken, function(val) {
+        FB.api('me/apprequests?fields=id,application,to,from,data,message,action_type,object,created_time&access_token=' + accessToken, function(val) {
           console.log(val.data);
           callback();
           // This will be used to get the profile picture
@@ -147,7 +237,7 @@ module Timeline {
           firebase.child(id).child("invite").update({
             message: "Hey do you want to play?",
             name: yourName,
-            id: yourID
+            id: GameState.myID
           });
         } else {
           FB.ui({method: 'apprequests',
@@ -173,13 +263,13 @@ module Timeline {
       UI.popup("Invitation sent to " + name);
     }
 
-    function startGame(state) {
+    function startGame() {
       game = new Game(GAME_WIDTH * SCALE, GAME_HEIGHT * SCALE);
-      game.play(state);
+      game.play();
     }
 
     export function saveState(callback) {
-      firebase.child(hashID(yourID, opponentID)).update(GameState, callback);
+      firebase.child(hashID(GameState.myID, opponentID)).update(GameState, callback);
     }
 
     function hashID(id1, id2) {
